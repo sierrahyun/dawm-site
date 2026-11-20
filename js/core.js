@@ -75,7 +75,7 @@ const codeWords = c => c ? c.split('').map(l => AXN[l]).join('·') : '';
 const typeName = c => (D.sc && D.sc.names[c]) || '';
 
 const CAT_COLOR = { '토너·패드': ['#EAF2F6', '#BFD6E2'], '앰플·세럼': ['#FBEBDD', '#E9C29A'], '크림': ['#F4EFE8', '#D8CBB8'], '선케어': ['#F3F6E6', '#CBD69A'], '색조': ['#F6E8E6', '#DDB3AA'], '의약품': ['#EEF0F5', '#B9C1D6'], '클렌징': ['#EEF5EF', '#BCD3BF'] };
-function bottle(cat, tex) {
+function bottle(cat, tex, pid) {
   const c = CAT_COLOR[cat] || CAT_COLOR['크림'];
   let shape;
   if (tex === '쿠션' || tex === '파우더') shape = `<rect x="8" y="58" width="44" height="26" rx="10" fill="${c[1]}"/><rect x="8" y="52" width="44" height="10" rx="5" fill="#fff" opacity=".7"/>`;
@@ -83,8 +83,44 @@ function bottle(cat, tex) {
   else if (cat === '앰플·세럼') shape = `<rect x="16" y="34" width="28" height="50" rx="7" fill="${c[1]}"/><rect x="24" y="18" width="12" height="18" rx="3" fill="#fff" opacity=".85"/><circle cx="30" cy="15" r="6" fill="#fff" opacity=".85"/>`;
   else if (cat === '의약품') shape = `<path d="M18 30h24v50a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4z" fill="${c[1]}"/><rect x="22" y="20" width="16" height="12" rx="2" fill="#fff" opacity=".85"/>`;
   else shape = `<rect x="14" y="28" width="32" height="56" rx="8" fill="${c[1]}"/><rect x="20" y="18" width="20" height="12" rx="3" fill="#fff" opacity=".85"/>`;
-  return `<span class="pvis" style="background:${c[0]}"><svg viewBox="0 0 60 88" aria-hidden="true">${shape}</svg></span>`;
+  return `<span class="pvis" ${pid ? `data-pid="${pid}"` : ''} style="background:${c[0]}"><svg viewBox="0 0 60 88" aria-hidden="true">${shape}</svg></span>`;
 }
+/* ---------- link preview images (Vercel /api/preview) ---------- */
+const PV = { cache: {}, q: [], busy: 0 };
+try { Object.assign(PV.cache, JSON.parse(sessionStorage.getItem('dawm.pv') || '{}')); } catch (e) { }
+const pageUrl = p => p.official || p.src;
+function preview(pid) {
+  const p = D.prodById[pid]; if (!p) return Promise.resolve(null);
+  if (PV.cache[pid] !== undefined) return Promise.resolve(PV.cache[pid]);
+  return new Promise(res => { PV.q.push([pid, res]); pump(); });
+}
+function pump() {
+  while (PV.busy < 4 && PV.q.length) {
+    const [pid, res] = PV.q.shift(); PV.busy++;
+    fetch('api/preview?url=' + encodeURIComponent(pageUrl(D.prodById[pid]))).then(r => r.ok ? r.json() : null).catch(() => null).then(d => {
+      PV.cache[pid] = d && d.image ? d : null; try { sessionStorage.setItem('dawm.pv', JSON.stringify(PV.cache)); } catch (e) { }
+      PV.busy--; res(PV.cache[pid]); pump();
+    });
+  }
+}
+function hydrateImages(root) {
+  (root.querySelectorAll ? root : document).querySelectorAll('[data-pid]:not([data-h])').forEach(el => {
+    el.setAttribute('data-h', '1');
+    preview(el.dataset.pid).then(d => {
+      if (!d || !d.image) return;
+      const im = new Image(); im.alt = ''; im.referrerPolicy = 'no-referrer'; im.loading = 'lazy'; im.decoding = 'async';
+      im.onload = () => el.classList.add('has-img'); im.onerror = () => im.remove(); im.src = d.image; el.appendChild(im);
+    });
+  });
+  (root.querySelectorAll ? root : document).querySelectorAll('[data-lp]:not([data-h])').forEach(el => {
+    el.setAttribute('data-h', '1');
+    preview(el.dataset.lp).then(d => {
+      if (!d) { el.querySelector('.lpbody').innerHTML = '<span class="muted small">미리보기를 불러오지 못했어요. 링크로 바로 열 수 있어요.</span>'; return; }
+      el.querySelector('.lpbody').innerHTML = `${d.image ? `<img src="${esc(d.image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">` : ''}<span><b>${esc(d.title || '')}</b><br><span class="small muted">${esc(d.site)} · 페이지 미리보기</span></span>`;
+    });
+  });
+}
+new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) hydrateImages(n); }))).observe(document.documentElement, { childList: true, subtree: true });
 function img(name, fallback) {
   // background with optional photo (img/<name>.jpg) layered over a gradient fallback
   return `background-image:url('img/${name}.jpg'),${fallback}`;

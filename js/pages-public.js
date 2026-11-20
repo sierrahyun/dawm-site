@@ -49,7 +49,7 @@ act('banner', a => {
 function prodRow(p, i, code, extra = '') {
   const s = code ? productScore(p, code) : null;
   const keys = p.ing.map(id => D.ingById[id]).filter(x => x && x.tier === 'A' && !['제형·기타', '보존·안정', '향·알레르기'].includes(x.group) && !BASE_ING.has(x.id)).slice(0, 3);
-  return `<a class="prow" href="#product-${p.id}">${i != null ? `<span class="rank">${i + 1}</span>` : ''}${bottle(p.cat, p.texture)}
+  return `<a class="prow" href="#product-${p.id}">${i != null ? `<span class="rank">${i + 1}</span>` : ''}${bottle(p.cat, p.texture, p.id)}
     <span class="pinfo"><span class="b">${esc(p.brand)} · ${esc(p.cat)}</span><span class="n" style="display:block">${esc(p.name)}</span>
     <span class="m">${esc(p.vol)} · ${won(p.price)} <span class="muted">(참고가)</span></span>
     <span class="chips" style="gap:4px;margin-top:6px">${keys.map(k => `<span class="tag">${esc(k.ko.split('(')[0])}</span>`).join('')}${extra}</span></span>
@@ -457,7 +457,7 @@ route('product', (v, id) => {
   v.innerHTML = `<section class="blk"><div class="wrap" style="max-width:980px">
     <a href="#ranking" class="small muted">← 제품 랭킹</a>
     <div class="grid" style="grid-template-columns:minmax(200px,280px) 1fr;gap:28px;margin-top:16px;align-items:start" id="pgrid">
-      <div class="card" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:${(CAT_COLOR[p.cat] || CAT_COLOR['크림'])[0]}">${bottle(p.cat, p.texture).replace('class="pvis"', 'class="pvis" style="width:70%;height:70%;background:none"')}</div>
+      <div class="card" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:${(CAT_COLOR[p.cat] || CAT_COLOR['크림'])[0]}">${bottle(p.cat, p.texture, p.id).replace('class="pvis"', 'class="pvis" style="width:70%;height:70%;background:none"')}</div>
       <div><div class="muted">${esc(p.brand)} · ${esc(p.company)}</div><h1 class="h1" style="font-size:clamp(24px,3vw,34px)">${esc(p.name)}</h1>
         <div style="margin:8px 0 16px">${esc(p.cat)} · ${esc(p.texture)} · ${esc(p.vol)} · <b>${won(p.price)}</b> <span class="muted small">(참고가)</span></div>
         ${a ? `<div class="card" style="display:flex;gap:18px;align-items:center;background:var(--soft)"><div class="score" style="min-width:86px"><b class="${scClass(a.score)}" style="font-size:40px">${a.score}</b><span>${code} 다움 점수</span></div>
@@ -469,6 +469,10 @@ route('product', (v, id) => {
     <h2 class="h2" style="font-size:18px;margin:34px 0 8px">전성분 ${p.inci.length}개</h2>
     <p class="small muted" style="margin:0 0 12px">순서는 함량이 많은 순(1% 이하 성분은 순서 무관). ${a ? '<span class="tag good">초록</span> 잘 맞음 · <span class="tag warn">주황</span> 주의 · 빨간 테두리 = 내 서랍 의심 성분' : ''}</p>
     <div class="inci-list">${p.ing.map((iid, k) => { const i = D.ingById[iid]; const simple = !/[·(]|등/.test(i.ko) && i.ko.length <= 22; const label = simple && (i.inci.length === 1 || p.inci[k].toLowerCase() === i.inci[0].toLowerCase()) ? i.ko : p.inci[k]; return `<a href="#ing-${iid}" class="${goodSet.has(iid) ? 'ig' : ''} ${warnSet.has(iid) ? 'iw' : ''} ${pSet.has(iid) ? 'ip' : ''}" title="${esc(i.ko + ' · ' + p.inci[k])}">${esc(label)}</a>`; }).join('')}</div>
+    <h2 class="h2" style="font-size:18px;margin:34px 0 10px">제품 페이지</h2>
+    <div class="grid g2"><a class="lp" data-lp="${p.id}" href="${esc(pageUrl(p))}" target="_blank" rel="noopener"><span class="lpbody"><span class="muted small">미리보기를 불러오는 중…</span></span></a>
+      <a class="lp" href="https://search.shopping.naver.com/search/all?query=${encodeURIComponent(p.brand + ' ' + p.name)}" target="_blank" rel="noopener"><span class="lpbody"><span><b>구매처 찾기</b><br><span class="small muted">네이버 쇼핑에서 ${esc(p.brand)} ${esc(p.name)} 검색</span></span></span></a></div>
+    <p class="small muted" style="margin-top:8px">제품 이미지는 연결된 페이지가 공유용으로 공개한 미리보기 이미지를 그대로 보여주는 거예요. 다움 서버에 저장하지 않고, 눌러서 원래 페이지로 이동해요.</p>
     <p class="small muted" style="margin-top:18px">전성분 출처: <a href="${p.src}" target="_blank" rel="noopener">${esc(p.src.replace('https://', ''))}</a> · 확인일 ${p.checked}. 리뉴얼로 처방이 바뀌었을 수 있어요. 구매 전 패키지 표기를 확인해 주세요.</p>
   </div></section>`;
   if (innerWidth < 760) $('#pgrid').style.gridTemplateColumns = '1fr';

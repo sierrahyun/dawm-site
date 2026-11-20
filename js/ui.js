@@ -95,7 +95,7 @@ function bindSearch() {
     const ex = i.length && norm(i[0].ko) === norm(e.target.value);
     const conH = c.length ? '<h6>개념 · 비교해서 보기</h6>' + c.map(x => `<button data-go="concept-${x.id}"><span class="tag gold">개념</span><span><b>${esc(x.name)}</b> <span class="muted small">${x.members.length}개 성분 비교</span></span></button>`).join('') : '';
     s.innerHTML = (ex ? '' : conH) + (i.length ? '<h6>성분</h6>' + i.map(x => `<button data-go="ing-${x.id}"><span class="tag">${esc(x.group)}</span><span><b>${esc(x.ko)}</b> <span class="muted small">${esc(x.inci[0])}</span></span></button>`).join('') : '')
-      + (ex ? conH : '') + (p.length ? '<h6>제품</h6>' + p.map(x => `<button data-go="product-${x.id}">${bottle(x.cat, x.texture).replace('pvis', 'mini')}<span><span class="muted small">${esc(x.brand)}</span><br><b>${esc(x.name)}</b></span></button>`).join('') : '');
+      + (ex ? conH : '') + (p.length ? '<h6>제품</h6>' + p.map(x => `<button data-go="product-${x.id}">${bottle(x.cat, x.texture, x.id).replace('pvis', 'mini')}<span><span class="muted small">${esc(x.brand)}</span><br><b>${esc(x.name)}</b></span></button>`).join('') : '');
     s.classList.add('on');
   });
   document.addEventListener('keydown', e => {
