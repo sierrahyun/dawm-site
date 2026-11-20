@@ -7,24 +7,38 @@ const BANNERS = [
   { k: 'Sponsored · 가상 브랜드 광고', t: '물처럼 스며드는<br>LUMA 데일리 선세럼', p: '무기자차 × 히알루론산. 백탁 없이 가볍게. (수업용 가상 광고)', ad: true, cta: '자세히', img: 'banner-ad-sunserum', bg: 'linear-gradient(120deg,#EEF3EA 0%,#DCE6D2 60%,#F6F9F3 100%)', label: '광고' }
 ];
 const BASE_ING = new Set(['water', 'glycerin', 'bg', 'propanediol', 'dpg', 'hexanediol', 'caprylic-tg', 'rose-water', 'fatty-acids', 'mannitol', 'tocopherol', 'squalane', 'betaine', 'honey', 'caprylic-acid', 'hydrogenated-polyisobutene']);
-UI.prefs.rank = { tab: 'all', sub: '', type: null, min: 0, max: 130000, preset: null };
+UI.prefs.rank = { tab: 'all', sub: '', type: null, min: 0, max: 130000, preset: null, brand: '' };
 
 function carousel(id) {
-  return `<div class="carousel" id="${id}">
-    ${BANNERS.map((b, i) => `<div class="slide ${i === 0 ? 'on' : ''}"><div class="bgimg" style="${img(b.img, b.bg)}"></div>
+  return `<div class="carousel" id="${id}" aria-roledescription="carousel"><div class="track">
+    ${BANNERS.map((b, i) => `<div class="slide" aria-label="${i + 1} / ${BANNERS.length}"><div class="bgimg" style="${img(b.img, b.bg)}"></div>
       <div class="txt"><div class="kick">${b.ad ? '<span class="tag ad">AD</span> ' : ''}${esc(b.k)}</div><h3>${b.t}</h3><p>${esc(b.p)}</p>
-      <button class="btn dark" data-act="banner" data-i="${i}">${esc(b.cta)} →</button></div></div>`).join('')}
-    <div class="cnav"><button data-act="cprev" aria-label="이전 배너">${ICON.prev}</button><span class="cnum"><b id="${id}-n">1</b> / ${BANNERS.length}</span><button data-act="cnext" aria-label="다음 배너">${ICON.next}</button></div>
-  </div><div class="ctabs">${BANNERS.map((b, i) => `<button class="${i === 0 ? 'on' : ''}" data-act="cgo" data-i="${i}">${esc(b.label)}</button>`).join('')}</div>`;
+      <button class="btn dark" data-act="banner" data-i="${i}">${esc(b.cta)} →</button></div></div>`).join('')}</div>
+    <div class="cnav"><button data-act="cprev" aria-label="이전 배너">${ICON.prev}</button><span class="cnum"><b>1</b> / ${BANNERS.length}</span><button data-act="cpause" aria-label="자동 넘김 멈춤/재생" class="cpp">❚❚</button><button data-act="cnext" aria-label="다음 배너">${ICON.next}</button></div>
+  </div><div class="ctabs">${BANNERS.map((b, i) => `<button class="${i === 0 ? 'on' : ''}" data-act="cgo" data-i="${i}">${esc(b.label)}<i class="cbar"></i></button>`).join('')}</div>`;
 }
-UI.ci = 0;
-function cshow(i) {
-  const n = BANNERS.length; UI.ci = (i + n) % n;
-  $$('.carousel .slide').forEach((s, k) => s.classList.toggle('on', k === UI.ci));
-  $$('.ctabs button').forEach((s, k) => s.classList.toggle('on', k === UI.ci));
+UI.ci = 0; UI.cHold = false; UI.cStop = false;
+const C_MS = 5500;
+function cshow(i, manual) {
+  const n = BANNERS.length; UI.ci = (i + n) % n; UI.cLast = Date.now();
+  const tr = $('.carousel .track'); if (tr) tr.style.transform = `translateX(-${UI.ci * 100}%)`;
+  $$('.ctabs button').forEach((s, k) => { s.classList.toggle('on', k === UI.ci); const bar = s.querySelector('.cbar'); if (bar) { bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = ''; } });
   const num = $('.cnum b'); if (num) num.textContent = UI.ci + 1;
 }
-act('cprev', () => cshow(UI.ci - 1)); act('cnext', () => cshow(UI.ci + 1)); act('cgo', a => cshow(+a.dataset.i));
+function startCarousel() {
+  const car = $('.carousel'); if (!car) return;
+  UI.ci = 0; cshow(0);
+  car.addEventListener('mouseenter', () => { UI.cHold = true; car.classList.add('hold'); });
+  car.addEventListener('mouseleave', () => { UI.cHold = false; car.classList.remove('hold'); UI.cLast = Date.now(); cshow(UI.ci); });
+  car.addEventListener('focusin', () => { UI.cHold = true; });
+  car.addEventListener('focusout', () => { UI.cHold = false; });
+  let x0 = null;
+  car.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; UI.cHold = true; }, { passive: true });
+  car.addEventListener('touchend', e => { UI.cHold = false; if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) cshow(UI.ci + (dx < 0 ? 1 : -1), true); else UI.cLast = Date.now(); });
+  every(300, () => { if (!UI.cHold && !UI.cStop && Date.now() - UI.cLast > C_MS) cshow(UI.ci + 1); });
+}
+act('cprev', () => cshow(UI.ci - 1, true)); act('cnext', () => cshow(UI.ci + 1, true)); act('cgo', a => cshow(+a.dataset.i, true));
+act('cpause', a => { UI.cStop = !UI.cStop; a.textContent = UI.cStop ? '▶' : '❚❚'; $('.carousel').classList.toggle('stopped', UI.cStop); if (!UI.cStop) cshow(UI.ci); });
 act('banner', a => {
   const b = BANNERS[+a.dataset.i];
   if (b.ad) { modal(`<span class="tag ad">AD</span><h3 class="h2" style="margin:12px 0 8px">LUMA 데일리 선세럼</h3><p class="muted">수업 프로젝트용 <b>가상 브랜드</b> 광고 예시예요. 실제 서비스에서는 광고 제품도 내 스킨코드 기준 점수와 함께 보여주고, '광고'임을 항상 표시해요.</p><button class="btn dark" data-act="close">닫기</button>`); return; }
@@ -51,7 +65,7 @@ route('home', v => {
   v.innerHTML = `
   <div class="wrap" style="padding-top:22px">${carousel('car')}</div>
   <section class="blk"><div class="wrap">
-    <div class="chips">${['토너·패드', '앰플·세럼', '크림', '선케어', '색조'].map(c => `<button class="chip" data-act="catgo" data-c="${c}">${c}</button>`).join('')}<a class="chip" href="#dict">성분으로 찾기</a><a class="chip" href="#community">피부타입별 방</a></div>
+    <div class="chips">${['클렌징', '토너·패드', '앰플·세럼', '크림', '선케어', '색조'].map(c => `<button class="chip" data-act="catgo" data-c="${c}">${c}</button>`).join('')}<a class="chip" href="#dict">성분으로 찾기</a><a class="chip" href="#community">피부타입별 방</a></div>
   </div></section>
   <section class="blk" style="padding-top:0"><div class="wrap grid g2" style="align-items:start">
     <div><div class="shead"><h2 class="h2">지금 많이 저장한 제품</h2><a href="#ranking">전체 랭킹 →</a></div>
@@ -74,9 +88,9 @@ route('home', v => {
     <div class="shead"><h2 class="h2">성분사전</h2><a href="#dict">272개 성분 전체 보기 →</a></div>
     <div class="grid g4">${featured.map(i => `<a class="card" href="#ing-${i.id}" style="text-decoration:none"><span class="tag">${esc(i.group)}</span><div style="font-weight:600;margin-top:10px">${esc(i.ko)}</div><div class="muted small">${esc(i.inci[0])}</div><div class="small" style="margin-top:8px">${esc(i.role)}</div></a>`).join('')}</div>
   </div></section>`;
-  every(6000, () => cshow(UI.ci + 1));
+  startCarousel();
 });
-act('catgo', a => { Object.assign(UI.prefs.rank, { tab: a.dataset.c === '선케어' ? 'sun' : a.dataset.c === '색조' ? 'color' : 'skin', sub: ['토너·패드', '앰플·세럼', '크림'].includes(a.dataset.c) ? a.dataset.c : '', preset: null }); go('ranking'); });
+act('catgo', a => { Object.assign(UI.prefs.rank, { tab: a.dataset.c === '선케어' ? 'sun' : a.dataset.c === '색조' ? 'color' : 'skin', sub: ['클렌징', '토너·패드', '앰플·세럼', '크림'].includes(a.dataset.c) ? a.dataset.c : '', preset: null }); go('ranking'); });
 document.addEventListener('input', e => {
   if (e.target.dataset.actInput === 'qpv') $('#qpv').textContent = (e.target.value / 10000) + '만원';
 });
@@ -169,37 +183,118 @@ function diagResult(v) {
 /* ================= DICTIONARY ================= */
 UI.prefs.dict = { q: '', g: '', all: false };
 const GROUPS = ['보습', '장벽', '진정', '미백·톤', '주름·탄력', '각질·피지', '자외선차단', '항산화', '향·알레르기', '보존·안정', '의약품 성분', '식물·자연 유래', '제형·기타'];
+const SHORT = { 'hyaluronic-acid': '히알루론산', 'sodium-hyaluronate': '소듐 HA', 'potassium-ha': '포타슘 HA', 'hydrolyzed-ha': '저분자 HA', 'hydrolyzed-sodium-ha': '초저분자 HA', 'acetylated-ha': '아세틸 HA', 'ha-crosspolymer': '가교 HA', 'ha-cation': '양이온 HA',
+  'pseudo-ceramide': '유사 세라마이드', 'ceramide-np': '세라마이드 NP', 'ceramide-ap': '세라마이드 AP', 'ceramide-eop': '세라마이드 EOP', 'ceramide-ns': '세라마이드 NS', 'fatty-acids': '지방산', 'phytosphingosine': '피토스핑고신',
+  'retinyl-palmitate': '레티닐팔미테이트', 'hpr': 'HPR', 'ethyl-ascorbic': '에틸아스코빅', 'ascorbyl-glucoside': '아스코빌글루코사이드', 'map': 'MAP', 'sap': 'SAP', 'ati': '지용성 C(ATIP)', 'ascorbyl-palmitate': '아스코빌팔미테이트', 'ascorbic-acid': '순수 비타민C',
+  'lha': 'LHA', 'betaine-salicylate': '베타인살리실레이트', 'asiaticoside': '아시아티코사이드 등', 'glycyrrhizate': '감초 성분', 'essential-oils': '에센셜오일', 'fatty-alcohols': '지방 알코올', 'alcohol': '에탄올', 'ferment': '유산균 발효', 'amino-acids': '아미노산',
+  'palmitoyl-peptides': '팔미토일 펩타이드', 'peptide-tetra11': '테트라펩타이드-11', 'peptide-tetra9': '테트라펩타이드-9', 'peptide-hexa8': '헥사펩타이드-8', 'dipeptide2': '다이펩타이드-2', 'collagen': '콜라겐',
+  'ethylhexyl-salicylate': '옥티살레이트', 'isoamyl-mc': '아밀록세이트', 'drometrizole': '메르질 XL', 'ensulizole': '엔슐리졸', 'ecamsule': '메르질 SX', 'dhhb': '유비눌 A+', 'bemotrizinol': '티노소브 S', 'avobenzone': '아보벤존', 'octinoxate': '옥티녹세이트', 'ethylhexyl-triazone': '유비눌 T150',
+  'titanium-dioxide': '티타늄디옥사이드', 'zinc-oxide': '징크옥사이드', 'benzoyl-peroxide': '벤조일퍼옥사이드', 'tranexamic-acid': '트라넥사믹애씨드', 'b-vitamins': '비타민B군', 'gluconolactone': '글루코노락톤', 'lactobionic': '락토바이오닉', 'houttuynia': '어성초', 'centella': '병풀추출물' };
+const shortName = id => SHORT[id] || (D.ingById[id] ? D.ingById[id].ko.split('(')[0] : id);
+const prodCount = id => D.prod.filter(p => p.ing.includes(id)).length;
 function axisTags(ing, code) {
   if (!code) return [...ing.good].map(l => `<span class="tag good">${AXN[l]}에 좋아요</span>`).join('') + [...ing.caution].map(l => `<span class="tag warn">${AXN[l]} 주의</span>`).join('');
   const g = code.split('').filter(l => ing.good.includes(l)), c = code.split('').filter(l => ing.caution.includes(l));
   return (g.length ? `<span class="tag good">${code}에 좋아요</span>` : '') + (c.length ? `<span class="tag warn">${c.map(l => AXN[l]).join('·')} 주의</span>` : '');
 }
+/* network graph: concept in the middle, member ingredients on an ellipse, related concepts in the corners */
+function networkSVG(con, focus) {
+  const W = 800, H = 500, cx = 400, cy = 250, M = con.members, n = M.length;
+  const rx = n > 9 ? 255 : 225, ry = n > 9 ? 175 : 160;
+  const pos = M.map((m, i) => { const t = -Math.PI / 2 + i * 2 * Math.PI / n; const k = n > 9 && i % 2 ? 0.72 : 1; return [cx + Math.cos(t) * rx * k, cy + Math.sin(t) * ry * k]; });
+  const corners = [[92, 46], [708, 46], [92, 454], [708, 454]];
+  const pill = (x, y, label, cls, href, sub) => { const w = Math.max(64, label.length * 13 + 26); return `<a href="${href}" class="nn ${cls}"><rect x="${x - w / 2}" y="${y - 17}" width="${w}" height="34" rx="17"/><text x="${x}" y="${y + 5}" text-anchor="middle">${esc(label)}</text>${sub ? `<text class="sub" x="${x}" y="${y + 31}" text-anchor="middle">${esc(sub)}</text>` : ''}</a>`; };
+  let edges = '', nodes = '';
+  M.forEach((m, i) => { const [x, y] = pos[i]; edges += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" class="e ${m.id === focus ? 'on' : ''}"/>`; nodes += pill(x, y, shortName(m.id), m.id === focus ? 'focus' : prodCount(m.id) ? '' : 'faint', '#ing-' + m.id, m.v[0].length < 12 ? m.v[0] : ''); });
+  con.rel.slice(0, 4).forEach((r, i) => { const [x, y] = corners[i]; const rc = D.conById[r.id];
+    edges += `<path d="M${cx},${cy} Q${(cx + x) / 2 + (i % 2 ? -40 : 40)},${(cy + y) / 2} ${x},${y}" class="e rel"/>`;
+    nodes += `<text class="rl" x="${x}" y="${y + (i < 2 ? 36 : -26)}" text-anchor="middle">${esc(r.t)}</text>`;
+    nodes += pill(x, y, rc.name, 'relc', '#concept-' + r.id); });
+  nodes += `<a href="#concept-${con.id}" class="nn center"><circle cx="${cx}" cy="${cy}" r="52"/><text x="${cx}" y="${cy + 2}" text-anchor="middle">${esc(con.name.length > 7 ? con.name.split(' ')[0] : con.name)}</text><text class="sub" x="${cx}" y="${cy + 22}" text-anchor="middle">${n}개 성분</text></a>`;
+  return `<div class="netwrap"><svg class="net" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(con.name)} 성분 네트워크">${edges}${nodes}</svg></div>`;
+}
+function compareTable(con, focus) {
+  return `<div style="overflow-x:auto"><table class="mw cmp"><tr><th>성분</th>${con.cols.map(c => `<th>${esc(c)}</th>`).join('')}<th>DB 제품</th></tr>${con.members.map(m => { const i = D.ingById[m.id]; const pc = prodCount(m.id);
+    return `<tr class="${m.id === focus ? 'on' : ''}"><td><a href="#ing-${m.id}"><b>${esc(shortName(m.id))}</b></a><br><span class="small muted">${esc(i.ko.split('(')[0] !== shortName(m.id) ? i.ko : i.inci[0])}</span></td>${m.v.map(x => `<td>${esc(x)}</td>`).join('')}<td>${pc ? pc + '개' : '<span class="muted">-</span>'}</td></tr>`; }).join('')}</table></div>`;
+}
+function chainHTML(con, focus) {
+  if (!con.chain) return '';
+  const fk = focus && D.ingById[focus] ? D.ingById[focus].ko : '';
+  return `<div class="chain">${con.chain.map((c, k) => `${k ? '<span class="arr" aria-hidden="true">→</span>' : ''}<span class="${fk && c.startsWith(fk) ? 'on' : ''}">${esc(c)}</span>`).join('')}<span class="small muted" style="margin-left:6px">오른쪽으로 갈수록 강하고 자극도 커요</span></div>`;
+}
+function conceptCard(c) {
+  return `<a class="ccard" href="#concept-${c.id}"><span class="small muted">${esc(c.en)}</span><b>${esc(c.name)}</b><span class="small">${esc(c.sum)}</span>
+    <span class="chips" style="gap:4px;margin-top:8px">${c.members.slice(0, 5).map(m => `<span class="tag">${esc(shortName(m.id))}</span>`).join('')}${c.members.length > 5 ? `<span class="tag">+${c.members.length - 5}</span>` : ''}</span></a>`;
+}
 route('dict', v => {
   const P = UI.prefs.dict, code = myCode();
   v.innerHTML = `<section class="blk"><div class="wrap">
-    <div class="shead"><div><div class="serif" style="font-size:18px;color:var(--accent2)">Ingredient dictionary</div><h1 class="h1">성분사전</h1>
-    <p class="muted" style="margin:6px 0 0">다움 해석 성분 ${D.ing.filter(i => i.tier === 'A').length}개 · 제품 전성분 연동 성분 ${D.ing.length}개${code ? ` · <b style="color:var(--accent)">${code} 기준</b>으로 표시 중` : ''}</p></div></div>
-    <div class="grid g2" style="margin-bottom:18px">
-      <a class="card" href="#article-hyaluronic" style="text-decoration:none;${img('banner-hyaluronic', 'linear-gradient(120deg,#EEF5FA,#DCEAF4)')};background-size:cover"><span class="tag">읽을거리</span><b style="display:block;font-size:18px;margin-top:8px">저분자? 고분자? 알아보자, 히알루론산!</b></a>
-      <a class="card" href="#article-barrier" style="text-decoration:none;${img('banner-ceramide', 'linear-gradient(120deg,#F7EFE3,#EBDCC4)')};background-size:cover"><span class="tag">읽을거리</span><b style="display:block;font-size:18px;margin-top:8px">피부장벽의 세콜지에 대한 고찰</b></a>
-    </div>
-    <div class="search" style="max-width:640px;margin-bottom:14px"><label>${ICON.search}<span class="sr">성분 검색</span><input id="dq" value="${esc(P.q)}" placeholder="국문·영문(INCI)·역할로 검색 (예: 장벽, Niacinamide)"></label></div>
-    <div class="chips" style="margin-bottom:12px"><button class="chip ${!P.g ? 'on' : ''}" data-act="dg" data-g="">전체</button>${GROUPS.map(g => `<button class="chip ${P.g === g ? 'on' : ''}" data-act="dg" data-g="${g}">${g}</button>`).join('')}</div>
-    <label class="small muted" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:8px"><input type="checkbox" id="dall" ${P.all ? 'checked' : ''}> 제형·보조 성분까지 모두 보기</label>
-    <div id="dlist"></div></div></section>`;
-  dictList();
-  $('#dq').addEventListener('input', e => { P.q = e.target.value; dictList(); });
-  $('#dall').addEventListener('change', e => { P.all = e.target.checked; dictList(); });
+    <div class="serif" style="font-size:18px;color:var(--accent2)">Ingredient dictionary</div><h1 class="h1">성분사전</h1>
+    <p class="muted" style="margin:6px 0 18px">개념 ${D.con.length}개 · 성분 ${D.ing.length}개 · 제품 ${D.prod.length}개 전성분 연동${code ? ` · <b style="color:var(--accent)">${code} 기준</b>으로 표시 중` : ''}</p>
+    <div class="search" style="max-width:720px;margin-bottom:10px"><label>${ICON.search}<span class="sr">성분 검색</span><input id="dq" value="${esc(P.q)}" placeholder="히알루론산, 레티놀, 비타민C, 시카, 선크림, Niacinamide…"></label></div>
+    <div class="chips" style="margin-bottom:26px">${['히알루론산', '레티놀', '비타민C', '세라마이드', '시카', '나이아신아마이드', '자외선', '향료'].map(x => `<button class="chip" data-act="dqs" data-q="${x}">${x}</button>`).join('')}</div>
+    <div id="dres"></div></div></section>`;
+  dictRender();
+  $('#dq').addEventListener('input', e => { P.q = e.target.value; dictRender(); });
 });
-act('dg', a => { UI.prefs.dict.g = a.dataset.g; $$('[data-act="dg"]').forEach(b => b.classList.toggle('on', b === a)); dictList(); });
-function dictList() {
-  const P = UI.prefs.dict, code = myCode(), q = P.q.trim().toLowerCase().replace(/\s/g, '');
-  let L = D.ing.filter(i => (P.all || i.tier === 'A' || q) && (!P.g || i.group === P.g));
-  if (q) L = L.filter(i => (i.ko + i.inci.join('') + i.role + i.group).toLowerCase().replace(/\s/g, '').includes(q));
-  const cnt = id => D.prod.filter(p => p.ing.includes(id)).length;
-  $('#dlist').innerHTML = `<div class="small muted" style="margin:6px 0">${L.length}개</div>` + L.slice(0, 120).map(i => `<a class="irow" href="#ing-${i.id}">
-    <span style="flex:1;min-width:0"><span class="ko">${esc(i.ko)}</span> <span class="en">${esc(i.inci.slice(0, 2).join(' · '))}</span><br><span class="small">${esc(i.role)}</span></span>
-    <span class="chips" style="gap:4px;justify-content:flex-end">${i.tier === 'A' ? axisTags(i, code) : ''}<span class="tag">${esc(i.group)}</span><span class="tag">제품 ${cnt(i.id)}</span></span></a>`).join('') + (L.length > 120 ? '<p class="muted small">검색어로 좁혀 보세요.</p>' : '');
+act('dqs', a => { UI.prefs.dict.q = a.dataset.q; $('#dq').value = a.dataset.q; dictRender(); });
+act('dg', a => { UI.prefs.dict.g = a.dataset.g; dictRender(); });
+act('dall', () => { UI.prefs.dict.all = !UI.prefs.dict.all; dictRender(); });
+function dictRender() {
+  const P = UI.prefs.dict, code = myCode(), box = $('#dres'); if (!box) return;
+  if (!P.q.trim()) {
+    let L = D.ing.filter(i => (P.all || i.tier === 'A') && (!P.g || i.group === P.g));
+    box.innerHTML = `<div class="shead"><h2 class="h2">개념으로 탐색</h2><span class="small muted">비슷한 성분끼리 묶어 비교해요</span></div>
+      <div class="cgrid">${D.con.map(conceptCard).join('')}</div>
+      <div class="grid g2" style="margin:30px 0 8px">
+        <a class="card" href="#article-hyaluronic" style="text-decoration:none;${img('banner-hyaluronic', 'linear-gradient(120deg,#EEF5FA,#DCEAF4)')};background-size:cover"><span class="tag">읽을거리</span><b style="display:block;font-size:18px;margin-top:8px;text-shadow:0 0 12px #fff">저분자? 고분자? 알아보자, 히알루론산!</b></a>
+        <a class="card" href="#article-barrier" style="text-decoration:none;${img('banner-ceramide', 'linear-gradient(120deg,#F7EFE3,#EBDCC4)')};background-size:cover"><span class="tag">읽을거리</span><b style="display:block;font-size:18px;margin-top:8px;text-shadow:0 0 12px #fff">피부장벽의 세콜지에 대한 고찰</b></a></div>
+      <div class="shead" style="margin-top:30px"><h2 class="h2">성분 목록</h2><button class="btn sm ghost" data-act="dall">${P.all ? '해석 성분만 보기' : '보조 성분까지 모두 보기'}</button></div>
+      <div class="chips" style="margin-bottom:10px"><button class="chip ${!P.g ? 'on' : ''}" data-act="dg" data-g="">전체</button>${GROUPS.map(g => `<button class="chip ${P.g === g ? 'on' : ''}" data-act="dg" data-g="${g}">${g}</button>`).join('')}</div>
+      <div class="small muted">${L.length}개</div>${L.slice(0, 150).map(i => ingRow(i, code)).join('')}`;
+    return;
+  }
+  const { c, i } = searchAll(P.q);
+  const more = D.ing.filter(x => !i.includes(x) && norm(x.ko + x.inci.join('') + x.role).includes(norm(P.q))).slice(0, 30);
+  const top = c[0];
+  box.innerHTML = (c.length ? `<div class="shead"><h2 class="h2">'${esc(P.q)}' 관련 개념</h2></div>
+      ${top ? `<div class="card" style="padding:22px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline"><a href="#concept-${top.id}" style="text-decoration:none"><b style="font-size:22px">${esc(top.name)}</b> <span class="muted small">${esc(top.en)}</span></a><a class="btn sm" href="#concept-${top.id}">자세히 →</a></div>
+        <p style="margin:8px 0 6px">${esc(top.sum)}</p>${chainHTML(top)}${networkSVG(top)}${compareTable(top)}</div>` : ''}
+      ${c.length > 1 ? `<div class="cgrid" style="margin-top:14px">${c.slice(1).map(conceptCard).join('')}</div>` : ''}` : '')
+    + `<div class="shead" style="margin-top:28px"><h2 class="h2">성분 ${i.length + more.length}개</h2></div>${i.concat(more).map(x => ingRow(x, code)).join('') || '<p class="muted">찾는 성분이 없어요. 영문(INCI)으로도 검색해 보세요.</p>'}`;
+}
+function ingRow(i, code) {
+  return `<a class="irow" href="#ing-${i.id}"><span style="flex:1;min-width:0"><span class="ko">${esc(i.ko)}</span> <span class="en">${esc(i.inci.slice(0, 2).join(' · '))}</span><br><span class="small">${esc(i.role)}</span>${i.concepts.length ? ' ' + i.concepts.map(c => `<span class="tag gold">${esc(D.conById[c].name)}</span>`).join(' ') : ''}</span>
+    <span class="chips" style="gap:4px;justify-content:flex-end">${i.tier === 'A' ? axisTags(i, code) : ''}<span class="tag">${esc(i.group)}</span><span class="tag">제품 ${prodCount(i.id)}</span></span></a>`;
+}
+route('concept', (v, id) => {
+  const c = D.conById[id]; if (!c) { go('dict'); return; }
+  const code = myCode();
+  const ps = D.prod.map(p => ({ p, n: c.members.filter(m => p.ing.includes(m.id)).length })).filter(x => x.n).sort((a, b) => b.n - a.n || (code ? productScore(b.p, code) - productScore(a.p, code) : b.p.pop - a.p.pop));
+  v.innerHTML = `<section class="blk"><div class="wrap" style="max-width:1000px">
+    <a href="#dict" class="small muted">← 성분사전</a>
+    <div style="margin:14px 0 4px" class="chips"><span class="tag gold">개념</span><span class="tag">${c.members.length}개 성분</span></div>
+    <h1 class="h1">${esc(c.name)}</h1><div class="muted">${esc(c.en)}</div>
+    <p style="font-size:18px;margin:16px 0 6px"><b>${esc(c.sum)}</b></p>
+    <p style="font-size:16px;line-height:1.85;margin:0 0 12px">${esc(c.desc)}</p>
+    ${chainHTML(c)}
+    <h2 class="h2" style="font-size:18px;margin:26px 0 6px">성분 네트워크</h2><p class="small muted" style="margin:0">가운데는 개념, 둘레는 속한 성분, 모서리는 관련 개념이에요. 눌러서 이동해요. 흐린 성분은 아직 DB 제품에 없는 성분이에요.</p>
+    ${networkSVG(c)}
+    <h2 class="h2" style="font-size:18px;margin:10px 0 10px">한눈에 비교</h2>${compareTable(c)}
+    ${code ? `<div class="card" style="margin-top:16px;background:var(--soft)"><b style="color:var(--accent)">나움의 한마디 · ${code}</b><p style="margin:6px 0 0">${naumOnConcept(c, code)}</p></div>` : ''}
+    <h2 class="h2" style="font-size:18px;margin:30px 0 10px">이 개념의 성분이 든 제품 ${ps.length}개</h2>
+    <div class="grid" style="gap:10px">${ps.slice(0, 10).map(x => prodRow(x.p, null, code, `<span class="tag gold">${esc(c.name.split(' ')[0])} ${x.n}종</span>`)).join('') || '<p class="muted">아직 DB에 없어요.</p>'}</div>
+  </div></section>`;
+});
+function naumOnConcept(c, code) {
+  const L = code.split('');
+  const good = c.members.filter(m => { const i = D.ingById[m.id]; return L.some(l => i.good.includes(l)) && !L.some(l => i.caution.includes(l)); }).map(m => shortName(m.id));
+  const warn = c.members.filter(m => L.some(l => D.ingById[m.id].caution.includes(l))).map(m => shortName(m.id));
+  let t = '';
+  if (good.length) t += `${good.slice(0, 4).join(', ')}부터 시작하면 좋아요. `;
+  if (warn.length) t += `${warn.slice(0, 4).join(', ')}은(는) ${code.includes('S') ? '민감(S)' : '지금'} 피부엔 낮은 농도로 천천히 들여요. `;
+  if (c.id === 'retinoid' && ointment()) t += `선반의 ${ointment().name}와 같은 밤엔 겹치지 않게 나눠요.`;
+  return t || '지금 피부에 특별히 걸리는 성분은 없어요.';
 }
 route('ing', (v, id) => {
   const i = D.ingById[id]; if (!i) { v.innerHTML = '<div class="wrap blk">성분을 찾을 수 없어요.</div>'; return; }
@@ -208,7 +303,7 @@ route('ing', (v, id) => {
   const art = i.tags.includes('ha') ? 'hyaluronic' : i.tags.includes('barrier') ? 'barrier' : null;
   const onShelf = me() && st().shelf.some(s => itemIngs(s).includes(i.id));
   const sus = me() && suspects().has(i.id);
-  v.innerHTML = `<section class="blk"><div class="wrap" style="max-width:900px">
+  v.innerHTML = `<section class="blk"><div class="wrap" style="max-width:1000px">
     <a href="#dict" class="small muted">← 성분사전</a>
     <div style="margin:14px 0 6px" class="chips"><span class="tag">${esc(i.group)}</span>${i.tier === 'B' ? '<span class="tag">보조 성분 · 국문 참고 표기</span>' : '<span class="tag gold">다움 해석 성분</span>'}${i.tags.includes('drug') ? '<span class="tag warn">의약품 성분</span>' : ''}</div>
     <h1 class="h1">${esc(i.ko)}</h1><div class="muted">${esc(i.inci.join(' · '))}</div>
@@ -216,8 +311,11 @@ route('ing', (v, id) => {
     <p style="font-size:16px;line-height:1.85;margin:0">${esc(i.desc || '제형을 만들거나 안정화하는 보조 성분이에요. 다움 해석표는 계속 확장 중이에요.')}</p>
     ${i.tier === 'A' ? `<div class="chips" style="margin:18px 0">${axisTags(i, null)}</div>` : ''}
     ${code && i.tier === 'A' ? `<div class="card" style="margin:12px 0;background:var(--soft)"><b style="color:var(--accent)">나움의 한마디 · ${code}</b><p style="margin:6px 0 0">${naumOnIngredient(i, code, onShelf, sus)}</p></div>` : ''}
-    ${art ? `<a class="btn" href="#article-${art}" style="margin:8px 0 20px">관련 읽을거리 →</a>` : ''}
-    <h2 class="h2" style="font-size:18px;margin:26px 0 12px">이 성분이 든 제품 ${ps.length}개</h2>
+    ${art ? `<a class="btn" href="#article-${art}" style="margin:8px 0 6px">관련 읽을거리 →</a>` : ''}
+    ${i.concepts.map(cid => { const c = D.conById[cid]; return `<div class="card" style="margin-top:26px;padding:22px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">
+      <div><span class="small muted">이 성분이 속한 개념</span><br><a href="#concept-${c.id}" style="text-decoration:none"><b style="font-size:20px">${esc(c.name)}</b></a> <span class="small muted">${esc(c.sum)}</span></div><a class="btn sm" href="#concept-${c.id}">개념 전체 보기 →</a></div>
+      ${chainHTML(c, i.id)}${networkSVG(c, i.id)}${compareTable(c, i.id)}</div>`; }).join('')}
+    <h2 class="h2" style="font-size:18px;margin:30px 0 12px">이 성분이 든 제품 ${ps.length}개</h2>
     <div class="grid" style="gap:10px">${ps.length ? ps.map(p => prodRow(p, null, code, `<span class="tag gold">${p.ing.indexOf(i.id) + 1}번째</span>`)).join('') : '<p class="muted">아직 DB에 이 성분이 든 제품이 없어요.</p>'}</div>
   </div></section>`;
 });
@@ -283,8 +381,9 @@ route('ranking', v => {
     <div class="shead"><div>${P.preset === 'dry-ampoule' ? '<span class="tag gold">배너 기획전</span><h1 class="h1" style="margin-top:8px">건성 김미연을 위한 수분앰플</h1><p class="muted" style="margin:6px 0 0">건성 스킨코드(DRNT) 성분 점수 순 · 현재 DB의 앰플·세럼 전체</p>' : '<div class="serif" style="font-size:18px;color:var(--accent2)">Ranking</div><h1 class="h1">제품 랭킹</h1>'}</div></div>
     <div class="pill-tabs" style="margin-bottom:12px">${tabs.map(([k, t]) => `<button class="chip ${P.tab === k ? 'on' : ''}" data-act="rtab" data-k="${k}">${t}</button>`).join('')}</div>
     <div class="card" style="margin-bottom:16px;display:grid;gap:14px">
-      ${P.tab === 'skin' || P.tab === 'type' ? `<div class="chips">${['', '토너·패드', '앰플·세럼', '크림'].map(c => `<button class="chip ${P.sub === c ? 'on' : ''}" data-act="rsub" data-c="${c}">${c || '스킨케어 전체'}</button>`).join('')}</div>` : ''}
+      ${P.tab === 'skin' || P.tab === 'type' ? `<div class="chips">${['', '클렌징', '토너·패드', '앰플·세럼', '크림'].map(c => `<button class="chip ${P.sub === c ? 'on' : ''}" data-act="rsub" data-c="${c}">${c || '스킨케어 전체'}</button>`).join('')}</div>` : ''}
       ${P.tab === 'type' ? `<label class="field" style="margin:0;max-width:320px"><span>피부타입</span><select class="input" id="rtype">${Object.keys(D.sc.names).map(c => `<option ${c === P.type ? 'selected' : ''} value="${c}">${c} · ${D.sc.names[c]}${c === myCode() ? ' (나)' : ''}</option>`).join('')}</select></label>` : ''}
+      <label class="field" style="margin:0;max-width:320px"><span>브랜드</span><select class="input" id="rbrand"><option value="">전체 브랜드</option>${[...new Set(D.prod.map(p => p.brand))].sort().map(b => `<option ${P.brand === b ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select></label>
       <div><div class="small muted" style="display:flex;justify-content:space-between"><span>가격</span><b id="rpl" style="color:var(--ink)"></b></div>
         <div class="range2"><span class="track"></span><span class="fill" id="rfill"></span>
         <input type="range" id="rmin" min="0" max="130000" step="5000" value="${P.min}" aria-label="최소 가격"><input type="range" id="rmax" min="0" max="130000" step="5000" value="${P.max}" aria-label="최대 가격"></div></div>
@@ -296,6 +395,7 @@ route('ranking', v => {
   const upd = () => rankList();
   $('#rmin').addEventListener('input', e => { P.min = Math.min(+e.target.value, P.max - 5000); e.target.value = P.min; upd(); });
   $('#rmax').addEventListener('input', e => { P.max = Math.max(+e.target.value, P.min + 5000); e.target.value = P.max; upd(); });
+  $('#rbrand').addEventListener('change', e => { P.brand = e.target.value; upd(); });
   const rt = $('#rtype'); if (rt) rt.addEventListener('change', e => { P.type = e.target.value; P.preset = null; upd(); });
   upd();
 });
@@ -303,8 +403,8 @@ act('rtab', a => { UI.prefs.rank.tab = a.dataset.k; UI.prefs.rank.preset = null;
 act('rsub', a => { UI.prefs.rank.sub = a.dataset.c; UI.prefs.rank.preset = null; render(); });
 function rankList() {
   const P = UI.prefs.rank, mc = mentionCounts();
-  const skin = ['토너·패드', '앰플·세럼', '크림'];
-  let L = D.prod.filter(p => p.price >= P.min && p.price <= P.max);
+  const skin = ['클렌징', '토너·패드', '앰플·세럼', '크림'];
+  let L = D.prod.filter(p => p.price >= P.min && p.price <= P.max && (!P.brand || p.brand === P.brand));
   if (P.tab === 'skin' || P.tab === 'type') L = L.filter(p => P.sub ? p.cat === P.sub : (P.tab === 'skin' ? skin.includes(p.cat) : true));
   if (P.tab === 'sun') L = L.filter(p => p.cat === '선케어' || p.ing.some(i => D.ingById[i].tags.includes('uv')) && p.cat !== '색조');
   if (P.tab === 'color') L = L.filter(p => p.cat === '색조');
@@ -314,7 +414,7 @@ function rankList() {
   $('#rfill').style.left = pct(P.min) + '%'; $('#rfill').style.width = (pct(P.max) - pct(P.min)) + '%';
   $('#rpl').textContent = won(P.min) + ' ~ ' + won(P.max);
   $('#rinfo').textContent = `${L.length}개 제품 · ${P.tab === 'type' ? P.type + ' 다움 점수 순' : '저장 + 커뮤니티 언급 순'}`;
-  $('#rlist').innerHTML = L.length ? L.slice(0, 10).map((p, i) => prodRow(p, i, P.tab === 'type' ? P.type : myCode(), mc[p.id] ? `<span class="tag">언급 ${mc[p.id]}</span>` : '')).join('') : '<p class="muted">이 가격대에는 제품이 없어요. 슬라이더를 넓혀 보세요.</p>';
+  $('#rlist').innerHTML = L.length ? L.slice(0, 20).map((p, i) => prodRow(p, i, P.tab === 'type' ? P.type : myCode(), mc[p.id] ? `<span class="tag">언급 ${mc[p.id]}</span>` : '')).join('') : '<p class="muted">이 가격대에는 제품이 없어요. 슬라이더를 넓혀 보세요.</p>';
 }
 
 /* ================= RECOMMEND ================= */
@@ -326,7 +426,7 @@ route('recommend', v => {
     <div class="serif" style="font-size:18px;color:var(--accent2)">Recommend</div><h1 class="h1" style="margin-bottom:18px">제품 추천</h1>
     <div class="grid" style="grid-template-columns:minmax(260px,320px) 1fr;gap:20px;align-items:start" id="recgrid">
       <div class="card" style="position:sticky;top:150px">
-        <label class="field"><span>카테고리</span><select class="input" id="fcat"><option value="">전체</option>${['토너·패드', '앰플·세럼', '크림', '선케어', '색조'].map(c => `<option ${P.cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+        <label class="field"><span>카테고리</span><select class="input" id="fcat"><option value="">전체</option>${['클렌징', '토너·패드', '앰플·세럼', '크림', '선케어', '색조'].map(c => `<option ${P.cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
         <label class="field"><span>피부타입</span><select class="input" id="ftype"><option value="">선택 안 함</option>${Object.keys(D.sc.names).map(c => `<option ${P.type === c ? 'selected' : ''} value="${c}">${c}${c === myCode() ? ' (나)' : ''}</option>`).join('')}</select></label>
         <label class="field"><span>최대 가격 <b id="fmaxv">${won(P.max)}</b></span><input type="range" id="fmax" min="10000" max="130000" step="5000" value="${P.max}"></label>
         <div class="field"><span>제형</span><div class="chips">${texs.map(t => `<button class="chip ${P.tex.includes(t) ? 'on' : ''}" data-act="ftex" data-t="${t}">${t}</button>`).join('')}</div></div>
@@ -365,6 +465,7 @@ route('product', (v, id) => {
           : `<div class="card" style="background:var(--soft)"><b>내 피부 기준 점수 보기</b><p class="small muted" style="margin:4px 0 10px">진단하면 자동으로 보여요. 지금은 피부타입을 골라 미리 볼 수 있어요.</p><select class="input" id="pcode" style="max-width:240px"><option value="">피부타입 선택</option>${Object.keys(D.sc.names).map(c => `<option>${c}</option>`).join('')}</select></div>`}
         ${me() && myCode() ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn ${onShelf ? '' : 'gold'}" data-act="toshelf" data-id="${p.id}">${onShelf ? '선반에 있어요 ✓' : '내 선반에 담기'}</button><button class="btn" data-act="todrawer" data-id="${p.id}">안 맞았어요</button><a class="btn" href="#naum" data-act="asknaum" data-q="${esc(p.tag)} 나한테 맞을까?">나움에게 묻기</a></div>` : ''}
       </div></div>
+    ${(() => { const cs = D.con.map(c => ({ c, m: c.members.filter(m => p.ing.includes(m.id)) })).filter(x => x.m.length); return cs.length ? `<h2 class="h2" style="font-size:18px;margin:34px 0 10px">성분 개념 요약</h2><div class="chips">${cs.map(x => `<a class="chip" href="#concept-${x.c.id}"><b>${esc(x.c.name)}</b>&nbsp;${x.m.map(m => esc(shortName(m.id))).join(' · ')}</a>`).join('')}</div>` : ''; })()}
     <h2 class="h2" style="font-size:18px;margin:34px 0 8px">전성분 ${p.inci.length}개</h2>
     <p class="small muted" style="margin:0 0 12px">순서는 함량이 많은 순(1% 이하 성분은 순서 무관). ${a ? '<span class="tag good">초록</span> 잘 맞음 · <span class="tag warn">주황</span> 주의 · 빨간 테두리 = 내 서랍 의심 성분' : ''}</p>
     <div class="inci-list">${p.ing.map((iid, k) => { const i = D.ingById[iid]; const simple = !/[·(]|등/.test(i.ko) && i.ko.length <= 22; const label = simple && (i.inci.length === 1 || p.inci[k].toLowerCase() === i.inci[0].toLowerCase()) ? i.ko : p.inci[k]; return `<a href="#ing-${iid}" class="${goodSet.has(iid) ? 'ig' : ''} ${warnSet.has(iid) ? 'iw' : ''} ${pSet.has(iid) ? 'ip' : ''}" title="${esc(i.ko + ' · ' + p.inci[k])}">${esc(label)}</a>`; }).join('')}</div>

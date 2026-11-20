@@ -1,5 +1,5 @@
 /* 다움 DAWM — core: data, store, router, matching engine, helpers */
-const D = { ing: [], prod: [], sc: null, com: null, ingById: {}, prodById: {}, prodByTag: {}, ingByInci: {} };
+const D = { ing: [], prod: [], sc: null, com: null, con: [], conById: {}, ingById: {}, prodById: {}, prodByTag: {}, ingByInci: {} };
 const KEY = 'dawm.v1';
 let mem = null; // in-memory fallback when storage is unavailable
 
@@ -74,7 +74,7 @@ const AXN = { O: '지성', D: '건성', S: '민감', R: '저항', P: '색소', N
 const codeWords = c => c ? c.split('').map(l => AXN[l]).join('·') : '';
 const typeName = c => (D.sc && D.sc.names[c]) || '';
 
-const CAT_COLOR = { '토너·패드': ['#EAF2F6', '#BFD6E2'], '앰플·세럼': ['#FBEBDD', '#E9C29A'], '크림': ['#F4EFE8', '#D8CBB8'], '선케어': ['#F3F6E6', '#CBD69A'], '색조': ['#F6E8E6', '#DDB3AA'], '의약품': ['#EEF0F5', '#B9C1D6'] };
+const CAT_COLOR = { '토너·패드': ['#EAF2F6', '#BFD6E2'], '앰플·세럼': ['#FBEBDD', '#E9C29A'], '크림': ['#F4EFE8', '#D8CBB8'], '선케어': ['#F3F6E6', '#CBD69A'], '색조': ['#F6E8E6', '#DDB3AA'], '의약품': ['#EEF0F5', '#B9C1D6'], '클렌징': ['#EEF5EF', '#BCD3BF'] };
 function bottle(cat, tex) {
   const c = CAT_COLOR[cat] || CAT_COLOR['크림'];
   let shape;
@@ -93,8 +93,9 @@ function img(name, fallback) {
 /* ---------- data loading ---------- */
 async function loadData() {
   const get = p => fetch(p).then(r => { if (!r.ok) throw new Error(p); return r.json(); });
-  const [ing, prod, sc, com] = await Promise.all([get('data/ingredients.json'), get('data/products.json'), get('data/skincode.json'), get('data/community.json')]);
-  Object.assign(D, { ing, prod, sc, com });
+  const [ing, prod, sc, com, con] = await Promise.all([get('data/ingredients.json'), get('data/products.json'), get('data/skincode.json'), get('data/community.json'), get('data/concepts.json')]);
+  Object.assign(D, { ing, prod, sc, com, con });
+  con.forEach(c => D.conById[c.id] = c);
   ing.forEach(i => { D.ingById[i.id] = i; i.inci.forEach(x => D.ingByInci[x.toLowerCase()] = i.id); });
   prod.forEach(p => { D.prodById[p.id] = p; D.prodByTag[p.tag] = p; });
 }

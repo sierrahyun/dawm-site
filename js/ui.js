@@ -16,7 +16,7 @@ function every(ms, fn) { UI.timers.push(setInterval(fn, ms)); }
 function navHTML(r) {
   const base = [['home', '홈'], ['dict', '성분사전'], ['community', '피부타입 커뮤니티'], ['ranking', '제품 랭킹'], ['recommend', '제품 추천']];
   const mine = [['myroom', 'My room'], ['routine', '내 루틴'], ['naum', '나움'], ['neighbors', '이웃']];
-  const isOn = k => r === k || r.startsWith(k + '-') || (k === 'dict' && (r.startsWith('ing-') || r.startsWith('article-'))) || (k === 'community' && r.startsWith('room-')) || (k === 'neighbors' && r.startsWith('neighbor-'));
+  const isOn = k => r === k || r.startsWith(k + '-') || (k === 'dict' && (r.startsWith('ing-') || r.startsWith('article-') || r.startsWith('concept-'))) || (k === 'community' && r.startsWith('room-')) || (k === 'neighbors' && r.startsWith('neighbor-'));
   let h = base.map(([k, t]) => `<a href="#${k}" class="${isOn(k) ? 'on' : ''}">${t}</a>`).join('');
   if (me() && myCode()) {
     const fresh = !UI.unlocked; UI.unlocked = true;
@@ -44,7 +44,7 @@ function shell() {
     <a href="#home" class="word" aria-label="다움 홈">dawm</a>
     <div class="search">
       <label>${ICON.search}<span class="sr">제품 또는 성분 검색</span>
-        <input id="q" type="search" autocomplete="off" placeholder="${u && u.code ? '제품·성분 검색 — 내 피부 기준으로 보여드려요' : '제품명·성분명 검색 (예: 히알루론산, 아토베리어)'}"></label>
+        <input id="q" type="search" autocomplete="off" placeholder="${u && u.code ? '제품·성분 검색 — 내 피부 기준으로 보여드려요' : '제품·성분 검색 (예: 히알루론산, 레티놀, 토리든)'}"></label>
       <div class="suggest" id="sug" role="listbox"></div>
     </div>
     <div class="hright">${right}</div>
@@ -64,7 +64,7 @@ function render() {
   let fn = routes[r];
   let arg = null;
   if (!fn) {
-    const m = r.match(/^(ing|product|room|article|neighbor)-(.+)$/);
+    const m = r.match(/^(ing|product|room|article|neighbor|concept)-(.+)$/);
     if (m) { fn = routes[m[1]]; arg = m[2]; }
   }
   if (!fn) fn = routes.home;
@@ -77,22 +77,25 @@ function render() {
 }
 
 /* ---------- search suggest ---------- */
+const norm = s => String(s || '').toLowerCase().replace(/[\s\-·()]/g, '');
 function searchAll(q) {
-  q = q.trim().toLowerCase(); if (!q) return { p: [], i: [] };
-  const n = s => s.toLowerCase().replace(/\s/g, '');
-  const qq = n(q);
-  const p = D.prod.filter(x => n(x.name + x.brand + x.tag).includes(qq) || x.inci.some(i => n(i).includes(qq))).slice(0, 6);
-  const i = D.ing.filter(x => n(x.ko).includes(qq) || x.inci.some(e => n(e).includes(qq)) || n(x.role).includes(qq))
-    .sort((a, b) => (a.tier > b.tier ? 1 : -1)).slice(0, 8);
-  return { p, i };
+  const qq = norm(q); if (!qq) return { c: [], p: [], i: [] };
+  const exact = D.ing.filter(x => norm(x.ko) === qq || x.inci.some(e => norm(e) === qq));
+  const c = D.con.filter(x => x.aliases.some(a => norm(a).includes(qq) || (norm(a).length >= 3 && qq.includes(norm(a)))) || norm(x.name).includes(qq) || x.members.some(m => exact.some(e => e.id === m.id))).slice(0, 4);
+  const i = exact.concat(D.ing.filter(x => !exact.includes(x) && (norm(x.ko).includes(qq) || x.inci.some(e => norm(e).includes(qq)) || norm(x.role).includes(qq)))
+    .sort((a, b) => (a.tier > b.tier ? 1 : a.tier < b.tier ? -1 : a.ko.length - b.ko.length))).slice(0, 8);
+  const p = D.prod.filter(x => norm(x.name + x.brand + x.tag).includes(qq)).slice(0, 6);
+  return { c, p, i };
 }
 function bindSearch() {
   document.addEventListener('input', e => {
     if (e.target.id !== 'q') return;
-    const { p, i } = searchAll(e.target.value); const s = $('#sug');
-    if (!p.length && !i.length) { s.classList.toggle('on', !!e.target.value.trim()); s.innerHTML = '<div class="noti muted">검색 결과가 없어요. 영문(INCI)으로도 찾아보세요.</div>'; return; }
-    s.innerHTML = (i.length ? '<h6>성분</h6>' + i.map(x => `<button data-go="ing-${x.id}"><span class="tag">${esc(x.group)}</span><span><b>${esc(x.ko)}</b> <span class="muted small">${esc(x.inci[0])}</span></span></button>`).join('') : '')
-      + (p.length ? '<h6>제품</h6>' + p.map(x => `<button data-go="product-${x.id}">${bottle(x.cat, x.texture).replace('pvis', 'mini')}<span><span class="muted small">${esc(x.brand)}</span><br><b>${esc(x.name)}</b></span></button>`).join('') : '');
+    const { c, p, i } = searchAll(e.target.value); const s = $('#sug');
+    if (!p.length && !i.length && !c.length) { s.classList.toggle('on', !!e.target.value.trim()); s.innerHTML = '<div class="noti muted">검색 결과가 없어요. 영문(INCI)으로도 찾아보세요.</div>'; return; }
+    const ex = i.length && norm(i[0].ko) === norm(e.target.value);
+    const conH = c.length ? '<h6>개념 · 비교해서 보기</h6>' + c.map(x => `<button data-go="concept-${x.id}"><span class="tag gold">개념</span><span><b>${esc(x.name)}</b> <span class="muted small">${x.members.length}개 성분 비교</span></span></button>`).join('') : '';
+    s.innerHTML = (ex ? '' : conH) + (i.length ? '<h6>성분</h6>' + i.map(x => `<button data-go="ing-${x.id}"><span class="tag">${esc(x.group)}</span><span><b>${esc(x.ko)}</b> <span class="muted small">${esc(x.inci[0])}</span></span></button>`).join('') : '')
+      + (ex ? conH : '') + (p.length ? '<h6>제품</h6>' + p.map(x => `<button data-go="product-${x.id}">${bottle(x.cat, x.texture).replace('pvis', 'mini')}<span><span class="muted small">${esc(x.brand)}</span><br><b>${esc(x.name)}</b></span></button>`).join('') : '');
     s.classList.add('on');
   });
   document.addEventListener('keydown', e => {

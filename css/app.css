@@ -99,20 +99,26 @@ body.member .chip.on{color:#fff}
 #view{animation:fadein .35s ease both}
 
 /* ---------- banner carousel ---------- */
-.carousel{position:relative;border-radius:28px;overflow:hidden;min-height:340px;background:var(--bg2)}
-.slide{position:absolute;inset:0;display:flex;align-items:center;opacity:0;transition:opacity .8s ease;pointer-events:none}
-.slide.on{opacity:1;pointer-events:auto}
-.slide .bgimg{position:absolute;inset:0;background-size:cover;background-position:center}
+.carousel{position:relative;border-radius:28px;overflow:hidden;background:var(--bg2)}
+.carousel .track{display:flex;transition:transform .9s cubic-bezier(.65,0,.25,1)}
+.slide{position:relative;flex:0 0 100%;min-height:340px;display:flex;align-items:center}
+.slide .bgimg{position:absolute;inset:0;background-size:cover;background-position:right center}
 .slide .txt{position:relative;padding:44px 48px;max-width:620px}
 .slide .kick{font-size:13px;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
 .slide h3{font-size:clamp(24px,3.2vw,38px);line-height:1.3;font-weight:300;letter-spacing:-.04em;margin:0 0 12px}
 .slide p{margin:0 0 22px;color:#4A443C}
 .cnav{position:absolute;right:20px;bottom:18px;display:flex;align-items:center;gap:8px;z-index:3}
 .cnav button{width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.85)}
+.cnav .cpp{font-size:11px;letter-spacing:-1px}
 .cnum{font-size:13px;padding:0 10px;height:30px;line-height:30px;border-radius:999px;background:rgba(255,255,255,.8)}
 .ctabs{display:flex;gap:6px;margin-top:12px;overflow-x:auto;scrollbar-width:none}
 .ctabs button{flex:none;border:0;background:none;padding:8px 12px;border-radius:999px;font-size:13px;color:var(--muted)}
+.ctabs button{position:relative;overflow:hidden}
 .ctabs button.on{background:var(--soft);color:var(--ink);font-weight:600}
+.ctabs .cbar{position:absolute;left:12px;right:12px;bottom:3px;height:2px;border-radius:2px;background:var(--ink);opacity:0;transform-origin:left;transform:scaleX(0)}
+.ctabs button.on .cbar{opacity:.5;animation:cfill 5.5s linear forwards}
+.carousel.hold~.ctabs .cbar,.carousel.stopped~.ctabs .cbar{animation-play-state:paused}
+@keyframes cfill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 
 /* ---------- product row ---------- */
 .prow{display:flex;gap:16px;align-items:center;padding:14px;border-radius:18px;border:1px solid var(--line);background:var(--card);text-decoration:none;transition:transform .2s,box-shadow .2s}
@@ -280,7 +286,7 @@ footer.site{border-top:1px solid var(--line);margin-top:60px;padding:30px 0 100p
   .hrow{gap:10px}
   .search{order:3;flex-basis:100%}
   .hright .btn.hide-m{display:none}
-  .carousel{min-height:380px}
+  .slide{min-height:380px}
   .slide{align-items:flex-end}
   .slide .txt{padding:26px 22px 70px}
   .widgets{grid-template-columns:1fr}
@@ -310,3 +316,37 @@ body[data-route=naum] footer.site{display:none}
 .split .art::after{content:'';position:absolute;inset:0;background:linear-gradient(0deg,rgba(255,250,240,.75),rgba(255,250,240,0) 55%);pointer-events:none}
 .split .art>div{z-index:1}
 @media (max-width:760px){.slide .bgimg::after{background:linear-gradient(0deg,rgba(255,253,248,.95) 0%,rgba(255,253,248,.8) 45%,rgba(255,253,248,.1) 80%)}.room-hero{min-height:320px}}
+
+/* concept network */
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.ccard{display:flex;flex-direction:column;gap:4px;padding:18px;border-radius:20px;border:1px solid var(--line);background:var(--card);text-decoration:none;transition:transform .2s,box-shadow .2s}
+.ccard:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(40,30,20,.08)}
+.ccard b{font-size:18px;letter-spacing:-.02em}
+.net{width:100%;height:auto;display:block;margin:6px 0 4px}
+.net .e{stroke:var(--line);stroke-width:1.5;fill:none}
+.net .e.on{stroke:var(--accent2);stroke-width:2.5}
+.net .e.rel{stroke:#C9B497;stroke-dasharray:5 5}
+.net .rl{font-size:12px;fill:var(--muted)}
+.net .nn rect{fill:var(--bg);stroke:var(--line);stroke-width:1.5;transition:fill .2s,stroke .2s}
+.net .nn text{font-size:13px;fill:var(--ink);font-family:var(--sans)}
+.net .nn .sub{font-size:11px;fill:var(--muted)}
+.net .nn:hover rect{stroke:var(--ink)}
+.net .nn.faint rect{fill:var(--soft);stroke-dasharray:3 3}
+.net .nn.faint text{fill:var(--muted)}
+.net .nn.focus rect{fill:var(--ink);stroke:var(--ink)}
+.net .nn.focus text{fill:#fff}
+.net .nn.relc rect{fill:#F5E6CD;stroke:#E2C291}
+.net .nn.center circle{fill:var(--ink)}
+.net .nn.center text{fill:#fff;font-size:17px;font-weight:600}
+.net .nn.center .sub{fill:rgba(255,255,255,.75);font-size:11px;font-weight:400}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0}
+.chain span{padding:6px 12px;border-radius:999px;background:var(--soft);font-size:14px}
+.chain span.on{background:var(--ink);color:#fff;font-weight:600}
+.chain .arr{background:none;padding:0;color:var(--muted)}
+.chain .small{background:none;padding:0}
+table.cmp td{font-size:14px}
+table.cmp tr.on td{background:var(--soft)}
+table.cmp tr.on td:first-child{box-shadow:inset 3px 0 0 var(--accent2)}
+
+.netwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media (max-width:760px){.net{min-width:660px}table.cmp{min-width:580px}.netwrap::after{content:'← 옆으로 밀어서 보기 →';display:block;text-align:center;font-size:12px;color:var(--muted);position:sticky;left:0}}
