@@ -47,7 +47,7 @@ act('banner', a => {
 
 function prodRow(p, i, code, extra = '') {
   const s = code ? productScore(p, code) : null;
-  const keys = p.ing.map(id => D.ingById[id]).filter(x => x && x.tier === 'A' && !['제형·기타', '보존·안정', '향·알레르기'].includes(x.group) && !BASE_ING.has(x.id)).slice(0, 3);
+  const keys = [...new Set(p.ing)].map(id => D.ingById[id]).filter(x => x && x.tier === 'A' && !['제형·기타', '보존·안정', '향·알레르기'].includes(x.group) && !BASE_ING.has(x.id)).slice(0, 3);
   return `<a class="prow" href="#product-${p.id}">${i != null ? `<span class="rank">${i + 1}</span>` : ''}${bottle(p.cat, p.texture, p.id)}
     <span class="pinfo"><span class="b">${esc(p.brand)} · ${esc(p.cat)}</span><span class="n" style="display:block">${esc(p.name)}</span>
     <span class="m">${esc(p.vol)} · ${won(p.price)} <span class="muted">(참고가)</span></span>
