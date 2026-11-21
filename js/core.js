@@ -155,6 +155,7 @@ function suspects() {
   (st().drawer || []).forEach(d => (d.sus || []).forEach(x => s.add(x)));
   return s;
 }
+const BASE_ING = new Set(['water', 'glycerin', 'bg', 'propanediol', 'dpg', 'hexanediol', 'caprylic-tg', 'rose-water', 'fatty-acids', 'mannitol', 'tocopherol', 'squalane', 'betaine', 'honey', 'caprylic-acid', 'hydrogenated-polyisobutene']);
 function analyze(ingIds, code, opts = {}) {
   const letters = code ? code.split('') : [];
   const sus = opts.noPersonal ? new Set() : (me() ? suspects() : new Set());
@@ -168,7 +169,7 @@ function analyze(ingIds, code, opts = {}) {
     const c = letters.filter(l => ing.caution.includes(l));
     const filler = ['제형·기타', '보존·안정'].includes(ing.group);
     if (c.length) { score -= 7 * w * c.length; warn.push({ ing, axes: c }); }
-    else if (g.length && !filler) { score += 5 * w * g.length; good.push({ ing, axes: g }); }
+    else if (g.length && !filler) { score += 5 * w * g.length; if (!BASE_ING.has(id)) good.push({ ing, axes: g }); }
     if (sus.has(id)) { score -= 12; personal.push(ing); }
   });
   score = Math.max(5, Math.min(98, Math.round(score)));

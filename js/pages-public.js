@@ -6,7 +6,6 @@ const BANNERS = [
   { k: '피부타입 커뮤니티', t: '지금 가장 뜨거운 방<br>#초민감피부들모여라', p: '새 제품 하나에도 붉어지는 사람들이 모였어요. 지금 이 방에서 가장 많이 언급된 제품은?', go: 'room-sensitive', cta: '방 구경하기', img: 'banner-community', bg: 'linear-gradient(120deg,#F1EEF8 0%,#E2DCF0 60%,#F8F6FC 100%)', label: '뜨거운 방' },
   { k: 'Sponsored · 가상 브랜드 광고', t: '물처럼 스며드는<br>LUMA 데일리 선세럼', p: '무기자차 × 히알루론산. 백탁 없이 가볍게. (수업용 가상 광고)', ad: true, cta: '자세히', img: 'banner-ad-sunserum', bg: 'linear-gradient(120deg,#EEF3EA 0%,#DCE6D2 60%,#F6F9F3 100%)', label: '광고' }
 ];
-const BASE_ING = new Set(['water', 'glycerin', 'bg', 'propanediol', 'dpg', 'hexanediol', 'caprylic-tg', 'rose-water', 'fatty-acids', 'mannitol', 'tocopherol', 'squalane', 'betaine', 'honey', 'caprylic-acid', 'hydrogenated-polyisobutene']);
 UI.prefs.rank = { tab: 'all', sub: '', type: null, min: 0, max: 130000, preset: null, brand: '' };
 
 function carousel(id) {
@@ -138,24 +137,30 @@ route('diagnosis', v => {
         <span class="orb" style="width:64px;height:64px;display:block;margin:0 auto 18px"></span>
         <div class="serif" style="font-size:20px;color:#9A6F38">Skin code</div>
         <h1 class="h1">${esc(me().name)}님, 반가워요.<br>이제 스킨코드를 찾아볼게요.</h1>
-        <p class="muted" style="margin:14px auto 28px;max-width:460px">유분 · 민감 · 색소 · 탄력, 네 가지 축의 16문항이에요. 약 3분. 정답은 없으니 요즘 내 피부를 떠올리며 골라주세요.</p>
+        <p class="muted" style="margin:14px auto 28px;max-width:460px">유분 · 민감 · 색소 · 탄력, 네 단계면 끝나요. 단계마다 4문항씩, 약 2분. 정답은 없으니 요즘 내 피부를 떠올리며 골라주세요.</p>
         <button class="btn dark" style="height:56px;padding:0 34px;font-size:16px" data-act="qstart">피부진단 시작하기</button>
         ${me().code ? `<div style="margin-top:14px"><a href="#home" class="small muted">이전 결과(${me().code})로 돌아가기</a></div>` : ''}
       </div></div>`;
     return;
   }
-  if (q.i >= D.sc.questions.length) return diagResult(v);
-  const Q = D.sc.questions[q.i], ax = D.sc.axes.find(a => a.key === Q.axis);
-  v.innerHTML = `<div class="qwrap">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px" class="small muted"><span>${esc(ax.name)} · ${q.i + 1} / ${D.sc.questions.length}</span><button class="btn sm ghost" data-act="qback" ${q.i === 0 ? 'disabled' : ''}>이전</button></div>
-    <div class="prog"><i style="width:${(q.i / D.sc.questions.length) * 100}%"></i></div>
-    <h2 class="h1 rise" style="font-size:clamp(22px,3vw,30px);margin:34px 0 24px">${esc(Q.q)}</h2>
-    <div class="rise" style="animation-delay:.1s">${Q.a.map((t, k) => `<button class="opt ${q.ans[q.i] === k ? 'on' : ''}" data-act="qans" data-k="${k}">${esc(t)}</button>`).join('')}</div>
+  const AX = D.sc.axes; if (q.i >= AX.length) return diagResult(v);
+  const ax = AX[q.i], qs = D.sc.questions.map((Q, k) => ({ Q, k })).filter(x => x.Q.axis === ax.key);
+  const done = qs.every(x => q.ans[x.k] != null);
+  v.innerHTML = `<div class="qwrap" style="max-width:820px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px" class="small muted"><span>${q.i + 1} / ${AX.length} · ${esc(ax.name)}</span><button class="btn sm ghost" data-act="qback" ${q.i === 0 ? 'disabled' : ''}>이전</button></div>
+    <div class="prog"><i style="width:${(q.i / AX.length) * 100}%"></i></div>
+    <div class="steps">${AX.map((a2, k) => `<span class="${k < q.i ? 'done' : k === q.i ? 'on' : ''}">${esc(a2.name)}</span>`).join('')}</div>
+    <h2 class="h1 rise" style="font-size:clamp(22px,3vw,30px);margin:26px 0 4px">${esc(ax.name)}에 대해 알려주세요</h2><p class="muted" style="margin:0 0 20px">요즘 내 피부를 떠올리며 가장 가까운 걸 골라요 · 4문항</p>
+    ${qs.map((x, n) => `<div class="qblock rise" style="animation-delay:${n * 0.06}s"><div class="qq"><b>${n + 1}</b>${esc(x.Q.q)}</div><div class="qopts">${x.Q.a.map((t, j) => `<button class="qo ${q.ans[x.k] === j ? 'on' : ''}" data-act="qans" data-q="${x.k}" data-k="${j}">${esc(t)}</button>`).join('')}</div></div>`).join('')}
+    <button class="btn dark" style="width:100%;height:54px;margin-top:10px" data-act="qnext" ${done ? '' : 'disabled'}>${q.i === AX.length - 1 ? '결과 보기' : '다음'}</button>
   </div>`;
 });
 act('qstart', () => { UI.quiz = { i: 0, ans: [] }; render(); });
 act('qback', () => { if (UI.quiz.i > 0) { UI.quiz.i--; render(); } });
-act('qans', a => { a.classList.add('on'); UI.quiz.ans[UI.quiz.i] = +a.dataset.k; setTimeout(() => { UI.quiz.i++; render(); }, 220); });
+act('qans', a => { const k = +a.dataset.q; UI.quiz.ans[k] = +a.dataset.k; a.parentElement.querySelectorAll('.qo').forEach(b => b.classList.toggle('on', b === a));
+  const ax = D.sc.axes[UI.quiz.i].key; const all = D.sc.questions.every((Q, i) => Q.axis !== ax || UI.quiz.ans[i] != null); $('[data-act="qnext"]').disabled = !all;
+  const nb = a.closest('.qblock') && a.closest('.qblock').nextElementSibling; if (nb && nb.classList.contains('qblock') && innerWidth < 760) nb.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+act('qnext', () => { UI.quiz.i++; render(); });
 function diagResult(v) {
   const { code, sums } = scoreQuiz(UI.quiz.ans);
   const u = me(); const first = !u.code;
@@ -388,7 +393,7 @@ route('ranking', v => {
         <div class="range2"><span class="track"></span><span class="fill" id="rfill"></span>
         <input type="range" id="rmin" min="0" max="130000" step="5000" value="${P.min}" aria-label="최소 가격"><input type="range" id="rmax" min="0" max="130000" step="5000" value="${P.max}" aria-label="최대 가격"></div></div>
     </div>
-    <div class="small muted" id="rinfo" style="margin-bottom:8px"></div>
+    <div class="small muted" id="rinfo" style="margin-bottom:8px"></div><div id="radslot"></div>
     <div class="grid" style="gap:10px" id="rlist"></div>
     <p class="small muted" style="margin-top:16px">저장 수·언급 수는 수업 시연용 예시 데이터예요. 피부타입별 순위는 전성분과 스킨코드로 계산한 다움 점수예요. 가격은 참고가예요.</p>
   </div></section>`;
@@ -414,6 +419,7 @@ function rankList() {
   $('#rfill').style.left = pct(P.min) + '%'; $('#rfill').style.width = (pct(P.max) - pct(P.min)) + '%';
   $('#rpl').textContent = won(P.min) + ' ~ ' + won(P.max);
   $('#rinfo').textContent = `${L.length}개 제품 · ${P.tab === 'type' ? P.type + ' 다움 점수 순' : '저장 + 커뮤니티 언급 순'}`;
+  $('#radslot').innerHTML = adSlot(myCode(), p => L.includes(p));
   $('#rlist').innerHTML = L.length ? L.slice(0, 20).map((p, i) => prodRow(p, i, P.tab === 'type' ? P.type : myCode(), mc[p.id] ? `<span class="tag">언급 ${mc[p.id]}</span>` : '')).join('') : '<p class="muted">이 가격대에는 제품이 없어요. 슬라이더를 넓혀 보세요.</p>';
 }
 
@@ -443,7 +449,7 @@ function recList() {
   const P = UI.prefs.rec;
   let L = D.prod.filter(p => (!P.cat || p.cat === P.cat) && p.price <= P.max && (!P.tex.length || P.tex.includes(p.texture)));
   const out = L.map(p => ({ p, a: P.type ? analyze(p.ing, P.type) : null })).sort((x, y) => P.type ? y.a.score - x.a.score : y.p.pop - x.p.pop);
-  $('#reclist').innerHTML = `<div class="small muted" style="margin-bottom:8px">${out.length}개 · ${P.type ? P.type + ' 기준 다움 점수 순' : '피부타입을 고르면 성분 점수로 정렬돼요'}</div>` +
+  $('#reclist').innerHTML = adSlot(myCode(), p => L.includes(p)) + `<div class="small muted" style="margin-bottom:8px">${out.length}개 · ${P.type ? P.type + ' 기준 다움 점수 순' : '피부타입을 고르면 성분 점수로 정렬돼요'}</div>` +
     (out.length ? out.map(({ p, a }) => `<div style="margin-bottom:10px">${prodRow(p, null, P.type)}${a ? `<div class="small" style="padding:8px 14px 0">${a.good.slice(0, 3).map(g => `<span class="tag good">${esc(g.ing.ko.split('(')[0])}</span>`).join(' ')} ${a.warn.slice(0, 2).map(g => `<span class="tag warn">${esc(g.ing.ko.split('(')[0])}</span>`).join(' ')} ${a.personal.length ? '<span class="tag warn">내 서랍 의심 성분 포함</span>' : ''}</div>` : ''}</div>`).join('') : '<p class="muted">조건에 맞는 제품이 없어요.</p>');
 }
 
@@ -589,3 +595,52 @@ FORMS.post = (f) => {
   $('#cmsgs').insertAdjacentHTML('beforeend', cmsgHTML([me().name, myCode() || '', 0, t], true)); $('#cmsgs').scrollTop = 1e9;
   inp.value = ''; refreshRank(id, t);
 };
+
+/* ================= FILMS ================= */
+route('films', v => {
+  v.innerHTML = `<section class="blk"><div class="wrap" style="max-width:1080px">
+    <div class="serif" style="font-size:18px;color:var(--accent2)">Brand films</div><h1 class="h1">다움 브랜드 필름</h1>
+    <p class="muted" style="margin:6px 0 26px">서비스를 만들기 전, 다움이 풀려는 문제와 경험을 영상으로 먼저 그려봤어요.</p>
+    <div class="grid g2" style="align-items:start">
+      <figure class="film"><video controls preload="metadata" playsinline poster="media/poster-film.jpg" src="media/dawm-ai-film.mp4"></video><figcaption><b>AI 영화 · 답을 찾는 밤</b><span class="small muted">광고 속에서 길을 잃은 한 사람이 나만의 답을 만나기까지</span></figcaption></figure>
+      <figure class="film"><video controls preload="metadata" playsinline poster="media/poster-motion.jpg" src="media/dawm-motion-graphic.mp4"></video><figcaption><b>모션그래픽 · 나에게 꼭 맞는 뷰티의 답</b><span class="small muted">스킨코드 진단부터 큐레이션까지, 서비스 콘셉트</span></figcaption></figure>
+    </div>
+    <div style="margin-top:30px;display:flex;gap:8px;flex-wrap:wrap"><a class="btn dark" href="#login">dawmtest로 직접 써보기</a><a class="btn" href="#home">다움 홈</a></div>
+  </div></section>`;
+});
+
+/* ================= FIT-GATED NATIVE ADS =================
+   광고도 같은 성분 기준을 통과해야 노출: 적합도 ≥ 70, 서랍 의심 성분 없음 → 입찰가 × 적합도로 1자리 선정 (시연용 가상 캠페인) */
+const ADS = [
+  { pid: 'torriden-divein-serum', bid: 820, copy: '저분자부터 가교형까지, 히알루론산 5종으로 속당김까지' },
+  { pid: 'anua-heartleaf77-toner', bid: 700, copy: '어성초 77%, 붉어진 날의 첫 단계' },
+  { pid: 'cnp-propolis-rescue', bid: 760, copy: '프로폴리스 × 나이아신아마이드 진정 앰플' },
+  { pid: 'estra-uv365-mineral', bid: 640, copy: '장벽 성분을 담은 무기자차' },
+  { pid: 'clio-mesh-glow-cushion', bid: 720, copy: '히알루론산 7종 글로우 쿠션' }
+];
+const AD_MIN = 70;
+function pickAd(code, filter) {
+  if (!code) return null;
+  const sus = suspects();
+  const c = ADS.map(a => { const p = D.prodById[a.pid]; const an = analyze(p.ing, code); return { ...a, p, an, rank: a.bid * an.score / 100 }; })
+    .filter(x => (!filter || filter(x.p)) && x.an.score >= AD_MIN && !x.p.ing.some(i => sus.has(i)) && !st().shelf.some(s => s.pid === x.pid) && !(st().mutedAds || []).includes(x.p.brand))
+    .sort((a, b) => b.rank - a.rank);
+  return c[0] || null;
+}
+function adSlot(code, filter) {
+  const a = pickAd(code, filter); if (!a) return '';
+  return `<div class="adslot"><div class="adhead"><span class="tag ad">AD</span><span class="small muted">${esc(a.p.brand)} 후원 · ${code} 적합도 기준을 통과한 광고예요</span><button class="adwhy" data-act="adwhy" data-pid="${a.pid}">왜 보이나요?</button></div>
+    ${prodRow(a.p, null, code, `<span class="tag gold">${esc(a.copy)}</span>`)}</div>`;
+}
+act('adwhy', a => {
+  const code = myCode(), ad = ADS.find(x => x.pid === a.dataset.pid), p = D.prodById[ad.pid], an = analyze(p.ing, code);
+  modal(`<span class="tag ad">AD</span><h3 class="h2" style="margin:12px 0 6px">왜 이 광고가 보이나요?</h3>
+   <div class="adcheck"><div><b>✓</b> ${code} 다움 점수 <b class="${scClass(an.score)}">${an.score}</b> · 노출 기준 ${AD_MIN}점 이상</div>
+   <div><b>✓</b> 내 서랍(안 맞았던 제품)의 의심 성분이 들어 있지 않아요</div>
+   <div><b>✓</b> 이미 선반에 있는 제품이 아니에요</div>
+   <div><b>·</b> 잘 맞는 이유: ${an.good.slice(0, 3).map(g => esc(g.ing.ko.split('(')[0])).join(', ') || '-'}</div>
+   ${an.warn.length ? `<div><b>·</b> 주의할 점도 그대로 보여드려요: ${an.warn.slice(0, 3).map(g => esc(g.ing.ko.split('(')[0])).join(', ')}</div>` : ''}</div>
+   <p class="small muted" style="margin:12px 0 16px">${esc(p.brand)}가 이 자리를 후원했지만, 기준을 넘지 못하는 광고는 아무리 입찰가가 높아도 보여드리지 않아요. 순서는 '입찰가 × 내 피부 적합도'로 정해요. (수업 시연용 가상 캠페인)</p>
+   <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn dark" href="#product-${p.id}" data-act="close">전성분 보기</a><button class="btn" data-act="admute" data-brand="${esc(p.brand)}">${esc(p.brand)} 광고 그만 보기</button></div>`);
+});
+act('admute', a => { const m = st().mutedAds = st().mutedAds || []; if (!m.includes(a.dataset.brand)) m.push(a.dataset.brand); S.save(); closeModal(); render(); toast(`${a.dataset.brand} 광고를 숨겼어요`); });

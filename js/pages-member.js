@@ -312,7 +312,8 @@ function naumReply(q) {
   if (/선크림|자외선|선케어|추천/.test(q)) {
     const cat = /선/.test(q) ? '선케어' : null;
     const L = D.prod.filter(p => (!cat || p.cat === cat || p.ing.includes('zinc-oxide')) && !st().shelf.some(s => s.pid === p.id)).map(p => ({ p, a: analyze(p.ing, code) })).sort((a, b) => b.a.score - a.a.score).slice(0, 3);
-    return { w: 'naum', t: `${code} 기준 지금 선반에 없는 제품 중 점수가 높은 순이에요.`, card: L.map(x => `<a class="verdict" style="display:flex;gap:10px;align-items:center;text-decoration:none" href="#product-${x.p.id}"><b class="${scClass(x.a.score)}" style="font-size:22px">${x.a.score}</b><span><span class="small muted">${esc(x.p.brand)}</span><br><b class="small">${esc(x.p.name)}</b></span></a>`).join('') };
+    const ad = pickAd(code, p => !cat || p.cat === cat);
+    return { w: 'naum', t: `${code} 기준 지금 선반에 없는 제품 중 점수가 높은 순이에요.${ad ? ' 마지막 하나는 광고인데, 같은 기준을 통과한 것만 보여드려요.' : ''}`, card: L.map(x => `<a class="verdict" style="display:flex;gap:10px;align-items:center;text-decoration:none" href="#product-${x.p.id}"><b class="${scClass(x.a.score)}" style="font-size:22px">${x.a.score}</b><span><span class="small muted">${esc(x.p.brand)}</span><br><b class="small">${esc(x.p.name)}</b></span></a>`).join('') + (ad && !L.some(x => x.p.id === ad.pid) ? `<div class="verdict" style="display:flex;gap:10px;align-items:center"><span class="tag ad">AD</span><a href="#product-${ad.pid}" style="flex:1;text-decoration:none"><span class="small muted">${esc(ad.p.brand)} 후원 · 적합도 ${ad.an.score}</span><br><b class="small">${esc(ad.p.name)}</b></a><button class="adwhy" data-act="adwhy" data-pid="${ad.pid}">왜?</button></div>` : '') };
   }
   return { w: 'naum', t: '아직 그 질문은 잘 모르겠어요. 이렇게 물어봐 주세요.\n· 제품명 (예: 워터뱅크블루크림 맞을까?)\n· 전성분 붙여넣기 (쉼표로 구분)\n· 오늘 나이트 루틴 / 레티놀 / 연고 / 붉어짐 / 선크림 추천' };
 }
