@@ -98,7 +98,7 @@ function bindSearch() {
       + (ex ? conH : '') + (p.length ? '<h6>제품</h6>' + p.map(x => `<button data-go="product-${x.id}">${bottle(x.cat, x.texture, x.id).replace('pvis', 'mini')}<span><span class="muted small">${esc(x.brand)}</span><br><b>${esc(x.name)}</b></span></button>`).join('') : '');
     s.classList.add('on');
   });
-  document.addEventListener('keydown', e => {
+  document.addEventListener('keydown', e => { const fc = e.target.closest && e.target.closest('.feedcard'); if (fc && e.key === 'Enter') { location.hash = fc.dataset.href; return; }
     if (e.target.id === 'q' && e.key === 'Enter') { const b = $('#sug button'); if (b) b.click(); }
     if (e.key === 'Escape') { closeModal(); closeMenus(); $('#sug') && $('#sug').classList.remove('on'); }
   });
@@ -173,6 +173,8 @@ function bindActions() {
   document.addEventListener('click', e => {
     const g = e.target.closest('[data-go]');
     if (g) { e.preventDefault(); $('#sug') && $('#sug').classList.remove('on'); const q = $('#q'); if (q) q.value = ''; go(g.dataset.go); return; }
+    const fc = e.target.closest('.feedcard');
+    if (fc && !e.target.closest('a')) { location.hash = fc.dataset.href; return; }
     const a = e.target.closest('[data-act]');
     if (a && ACT[a.dataset.act]) { ACT[a.dataset.act](a, e); }
     if (!e.target.closest('.menu') && !e.target.closest('[data-act="noti"]') && !e.target.closest('[data-act="profile"]')) closeMenus();

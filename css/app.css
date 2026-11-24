@@ -231,7 +231,7 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
 .cmsg{display:flex;gap:10px;padding:10px 0}
 .cmsg .who{font-size:13px;color:var(--muted)}
 .cmsg .who b{color:var(--ink);font-weight:600;margin-right:6px}
-.mention{color:var(--accent2);font-weight:600;text-decoration:none;background:var(--soft);padding:1px 6px;border-radius:6px}
+.mention{color:var(--accent2);font-weight:600;white-space:nowrap;text-decoration:none;background:var(--soft);padding:1px 6px;border-radius:6px}
 .mrank li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);transition:background .4s}
 .mrank li.bump{background:#FFF4DA}
 .mrank ol{list-style:none;margin:0;padding:0}
@@ -383,3 +383,5 @@ table.cmp tr.on td:first-child{box-shadow:inset 3px 0 0 var(--accent2)}
 .adwhy{margin-left:auto;border:0;background:none;font-size:13px;text-decoration:underline;color:var(--muted);padding:4px}
 .adcheck{display:grid;gap:8px;margin-top:10px;font-size:14px}
 .adcheck b{color:var(--ok)}
+
+.feedcard{cursor:pointer;transition:border-color .2s}.feedcard:hover{border-color:var(--ink)}

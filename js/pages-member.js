@@ -71,7 +71,7 @@ function memberHome(v) {
   </div></section>
   <section class="blk" style="padding-top:0"><div class="wrap">
     <div class="shead"><h2 class="h2">${code} 방 새 소식</h2><a href="#room-type-${code}">입장하기 →</a></div>
-    <div class="grid g2">${(posts.length ? posts : D.com.rooms[0].msgs.slice(0, 4).map(m => ({ r: D.com.rooms[0], m }))).map(x => `<a class="card" href="#room-${x.r.id}" style="text-decoration:none"><div class="small muted">${esc(x.r.name)} · ${esc(x.m[0])} · ${esc(x.m[1])}</div><div style="margin-top:6px">${mentionHTML(x.m[3])}</div></a>`).join('')}</div>
+    <div class="grid g2">${(posts.length ? posts : D.com.rooms[0].msgs.slice(0, 4).map(m => ({ r: D.com.rooms[0], m }))).map(x => `<div class="card feedcard" role="link" tabindex="0" data-href="#room-${x.r.id}"><div class="small muted">${esc(x.r.name)} · ${esc(x.m[0])} · ${esc(x.m[1])}</div><div style="margin-top:6px">${mentionHTML(x.m[3])}</div></div>`).join('')}</div>
   </div></section>`;
   startCarousel();
   if (!UI.greeted) { UI.greeted = true; setTimeout(() => toast(isRetinolDay() ? '오늘은 레티놀 데이예요 · 아젤리아는 아침에만' : '오늘은 레티놀 쉬는 날이에요 🌙'), 900); }
