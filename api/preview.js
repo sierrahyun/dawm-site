@@ -11,18 +11,27 @@ module.exports = async (req, res) => {
   let u;
   try { u = new URL(String(req.query.url || '')); } catch (e) { return res.status(400).json({ error: 'bad url' }); }
   if (u.protocol !== 'https:' || !ALLOW.some(d => u.hostname === d || u.hostname.endsWith('.' + d))) return res.status(403).json({ error: 'domain not allowed' });
-  try {
+  const get = async ua => {
     const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 8000);
-    const r = await fetch(u.href, { signal: ctrl.signal, redirect: 'follow', headers: { 'user-agent': 'Mozilla/5.0 (compatible; DawmLinkPreview/1.0; +https://dawm-site.vercel.app)', accept: 'text/html' } });
-    clearTimeout(t);
-    if (!r.ok) return res.status(502).json({ error: 'upstream ' + r.status });
-    const html = (await r.text()).slice(0, 500000);
+    try { return await fetch(u.href, { signal: ctrl.signal, redirect: 'follow', headers: { 'user-agent': ua, accept: 'text/html,application/xhtml+xml', 'accept-language': 'ko-KR,ko;q=0.9,en;q=0.8' } }); }
+    finally { clearTimeout(t); }
+  };
+  try {
+    let r = await get('Mozilla/5.0 (compatible; DawmLinkPreview/1.0; +https://dawm-site.vercel.app)');
+    if (!r.ok) { await new Promise(ok => setTimeout(ok, 700)); r = await get('Mozilla/5.0 (compatible; DawmLinkPreview/1.0; +https://dawm-site.vercel.app)'); }
+    if (!r.ok) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: 'upstream ' + r.status }); }
+    const html = (await r.text()).slice(0, 800000);
     let image = unesc(pick(html, 'og:image') || pick(html, 'twitter:image'));
+    if (!image || /logo|default|placeholder/i.test(image)) {
+      const m = html.match(/<img[^>]+src=["'](https?:\/\/[^"']*(?:active_storage|\/products?\/|cdn\/shop\/files)[^"']+)["']/i);
+      if (m) image = unesc(m[1]);
+    }
     if (image) image = new URL(image, u.href).href;
     const title = unesc(pick(html, 'og:title') || ((html.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1] || '').trim());
-    res.setHeader('Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', image ? 'public, s-maxage=604800, stale-while-revalidate=86400' : 'public, s-maxage=3600');
     return res.status(200).json({ image, title, site: u.hostname.replace(/^www\./, ''), url: u.href });
   } catch (e) {
+    res.setHeader('Cache-Control', 'no-store');
     return res.status(504).json({ error: 'fetch failed' });
   }
 };

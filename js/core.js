@@ -87,20 +87,24 @@ function bottle(cat, tex, pid) {
 }
 /* ---------- link preview images (Vercel /api/preview) ---------- */
 const PV = { cache: {}, q: [], busy: 0 };
-try { Object.assign(PV.cache, JSON.parse(sessionStorage.getItem('dawm.pv') || '{}')); } catch (e) { }
+try { Object.assign(PV.cache, JSON.parse(sessionStorage.getItem('dawm.pv2') || '{}')); } catch (e) { }
 const pageUrl = p => p.official || p.src;
 function preview(pid) {
   const p = D.prodById[pid]; if (!p) return Promise.resolve(null);
   if (PV.cache[pid] !== undefined) return Promise.resolve(PV.cache[pid]);
-  return new Promise(res => { PV.q.push([pid, res]); pump(); });
+  return new Promise(res => { PV.q.push([pid, res, 0]); pump(); });
 }
+/* 실패(차단·시간 초과)는 기억하지 않고 잠시 뒤 다시 시도해요. 성공한 응답만 이번 방문 동안 기억해요. */
 function pump() {
-  while (PV.busy < 4 && PV.q.length) {
-    const [pid, res] = PV.q.shift(); PV.busy++;
-    fetch('api/preview?url=' + encodeURIComponent(pageUrl(D.prodById[pid]))).then(r => r.ok ? r.json() : null).catch(() => null).then(d => {
-      PV.cache[pid] = d && d.image ? d : null; try { sessionStorage.setItem('dawm.pv', JSON.stringify(PV.cache)); } catch (e) { }
-      PV.busy--; res(PV.cache[pid]); pump();
-    });
+  while (PV.busy < 2 && PV.q.length) {
+    const [pid, res, tries] = PV.q.shift(); PV.busy++;
+    fetch('api/preview?url=' + encodeURIComponent(pageUrl(D.prodById[pid]))).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(d => {
+      PV.cache[pid] = d && d.image ? d : null; try { sessionStorage.setItem('dawm.pv2', JSON.stringify(PV.cache)); } catch (e) { }
+      res(PV.cache[pid]);
+    }, () => {
+      if (tries < 2) setTimeout(() => { PV.q.push([pid, res, tries + 1]); pump(); }, 1500 * (tries + 1) + Math.random() * 800);
+      else res(null);
+    }).finally(() => { PV.busy--; pump(); });
   }
 }
 function hydrateImages(root) {
