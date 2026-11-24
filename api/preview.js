@@ -1,6 +1,6 @@
 // 링크 미리보기: 제품 페이지가 공유용으로 공개한 대표 이미지(og:image)와 제목을 읽어 돌려줘요.
 // 이미지는 저장하지 않고 원래 주소 그대로 보여주며, 항상 원본 페이지 링크와 함께 표시해요.
-const ALLOW = ['skinsort.com', 'amoremall.com', 'lgcaremall.com', 'belifcosmetic.com', 'cnpcosmetics.com', 'innisfree.com', 'anua.kr', 'anua.com', 'torriden.com', 'numbuzin.com', 'clubclio.co.kr', 'thesaemcosmetic.com', 'aestura.com', 'laneige.com', 'sulwhasoo.com', 'iope.com', 'hera.com', 'illiyoon.com', 'physiogel.co.kr', 'skin1004.com', 'vitacost.com'];
+const ALLOW = ['skinsort.com', 'amoremall.com', 'lgcaremall.com', 'belifcosmetic.com', 'cnpcosmetics.com', 'innisfree.com', 'anua.kr', 'anua.com', 'torriden.com', 'numbuzin.com', 'clubclio.co.kr', 'thesaemcosmetic.com', 'aestura.com', 'laneige.com', 'sulwhasoo.com', 'iope.com', 'hera.com', 'illiyoon.com', 'physiogel.co.kr', 'skin1004.com', 'vitacost.com', 'cosrx.com', 'sokoglam.com', 'ulta.com', 'whatsinmyjar.com'];
 const pick = (html, key) => {
   const a = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${key}["'][^>]*content=["']([^"']+)["']`, 'i'));
   const b = html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name)=["']${key}["']`, 'i'));
