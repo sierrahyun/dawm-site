@@ -261,12 +261,14 @@ function dictRender() {
   }
   const { c, i } = searchAll(P.q);
   const more = D.ing.filter(x => !i.includes(x) && norm(x.ko + x.inci.join('') + x.role).includes(norm(P.q))).slice(0, 30);
-  const top = c[0];
-  box.innerHTML = (c.length ? `<div class="shead"><h2 class="h2">'${esc(P.q)}' 관련 개념</h2></div>
+  const top = c[0], nq = norm(P.q);
+  const fi = i.find(x => x.concepts.length && (norm(x.ko) === nq || norm(shortName(x.id)) === nq || x.inci.some(n => norm(n) === nq)));
+  box.innerHTML = (fi ? `<div class="shead"><h2 class="h2">'${esc(P.q)}' 성분</h2></div><div class="card" style="padding:18px 22px"><div class="netmount" data-cid="${fi.concepts[0]}" data-focus="${fi.id}" data-mode="focus"></div></div>` : '') + (c.length ? `<div class="shead"><h2 class="h2">'${esc(P.q)}' 관련 개념</h2></div>
       ${top ? `<div class="card" style="padding:22px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline"><a href="#concept-${top.id}" style="text-decoration:none"><b style="font-size:22px">${esc(top.name)}</b> <span class="muted small">${esc(top.en)}</span></a><a class="btn sm" href="#concept-${top.id}">자세히 →</a></div>
-        <p style="margin:8px 0 6px">${esc(top.sum)}</p>${chainHTML(top)}${networkSVG(top)}${compareTable(top)}</div>` : ''}
+        <p style="margin:8px 0 6px">${esc(top.sum)}</p>${chainHTML(top)}${fi ? '' : `<div class="netmount" data-cid="${top.id}"></div>`}${compareTable(top)}</div>` : ''}
       ${c.length > 1 ? `<div class="cgrid" style="margin-top:14px">${c.slice(1).map(conceptCard).join('')}</div>` : ''}` : '')
     + `<div class="shead" style="margin-top:28px"><h2 class="h2">성분 ${i.length + more.length}개</h2></div>${i.concat(more).map(x => ingRow(x, code)).join('') || '<p class="muted">찾는 성분이 없어요. 영문(INCI)으로도 검색해 보세요.</p>'}`;
+  clearTimeout(netTimer); netTimer = setTimeout(() => mountNets(box), 280);
 }
 function ingRow(i, code) {
   return `<a class="irow" href="#ing-${i.id}"><span style="flex:1;min-width:0"><span class="ko">${esc(i.ko)}</span> <span class="en">${esc(i.inci.slice(0, 2).join(' · '))}</span><br><span class="small">${esc(i.role)}</span>${i.concepts.length ? ' ' + i.concepts.map(c => `<span class="tag gold">${esc(D.conById[c].name)}</span>`).join(' ') : ''}</span>
@@ -283,14 +285,17 @@ route('concept', (v, id) => {
     <p style="font-size:18px;margin:16px 0 6px"><b>${esc(c.sum)}</b></p>
     <p style="font-size:16px;line-height:1.85;margin:0 0 12px">${esc(c.desc)}</p>
     ${chainHTML(c)}
-    <h2 class="h2" style="font-size:18px;margin:26px 0 6px">성분 네트워크</h2><p class="small muted" style="margin:0">가운데는 개념, 둘레는 속한 성분, 모서리는 관련 개념이에요. 눌러서 이동해요. 흐린 성분은 아직 DB 제품에 없는 성분이에요.</p>
-    ${networkSVG(c)}
+    <h2 class="h2" style="font-size:18px;margin:26px 0 6px">성분 네트워크</h2>
+    <div class="netmount" data-cid="${c.id}"></div>
     <h2 class="h2" style="font-size:18px;margin:10px 0 10px">한눈에 비교</h2>${compareTable(c)}
     ${code ? `<div class="card" style="margin-top:16px;background:var(--soft)"><b style="color:var(--accent)">나움의 한마디 · ${code}</b><p style="margin:6px 0 0">${naumOnConcept(c, code)}</p></div>` : ''}
     <h2 class="h2" style="font-size:18px;margin:30px 0 10px">이 개념의 성분이 든 제품 ${ps.length}개</h2>
     <div class="grid" style="gap:10px">${ps.slice(0, 10).map(x => prodRow(x.p, null, code, `<span class="tag gold">${esc(c.name.split(' ')[0])} ${x.n}종</span>`)).join('') || '<p class="muted">아직 DB에 없어요.</p>'}</div>
   </div></section>`;
+  mountNets(v);
 });
+function mountNets(root) { root.querySelectorAll('.netmount').forEach(el => NET.mount(el, { cid: el.dataset.cid, focus: el.dataset.focus || null, mode: el.dataset.mode || 'net' })); }
+let netTimer = null;
 function naumOnConcept(c, code) {
   const L = code.split('');
   const good = c.members.filter(m => { const i = D.ingById[m.id]; return L.some(l => i.good.includes(l)) && !L.some(l => i.caution.includes(l)); }).map(m => shortName(m.id));
@@ -319,10 +324,11 @@ route('ing', (v, id) => {
     ${art ? `<a class="btn" href="#article-${art}" style="margin:8px 0 6px">관련 읽을거리 →</a>` : ''}
     ${i.concepts.map(cid => { const c = D.conById[cid]; return `<div class="card" style="margin-top:26px;padding:22px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">
       <div><span class="small muted">이 성분이 속한 개념</span><br><a href="#concept-${c.id}" style="text-decoration:none"><b style="font-size:20px">${esc(c.name)}</b></a> <span class="small muted">${esc(c.sum)}</span></div><a class="btn sm" href="#concept-${c.id}">개념 전체 보기 →</a></div>
-      ${chainHTML(c, i.id)}${networkSVG(c, i.id)}${compareTable(c, i.id)}</div>`; }).join('')}
+      ${chainHTML(c, i.id)}<div class="netmount" data-cid="${c.id}" data-focus="${i.id}"></div>${compareTable(c, i.id)}</div>`; }).join('')}
     <h2 class="h2" style="font-size:18px;margin:30px 0 12px">이 성분이 든 제품 ${ps.length}개</h2>
     <div class="grid" style="gap:10px">${ps.length ? ps.map(p => prodRow(p, null, code, `<span class="tag gold">${p.ing.indexOf(i.id) + 1}번째</span>`)).join('') : '<p class="muted">아직 DB에 이 성분이 든 제품이 없어요.</p>'}</div>
   </div></section>`;
+  mountNets(v);
 });
 function naumOnIngredient(i, code, onShelf, sus) {
   const g = code.split('').filter(l => i.good.includes(l)), c = code.split('').filter(l => i.caution.includes(l));
