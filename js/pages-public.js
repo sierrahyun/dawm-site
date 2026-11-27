@@ -612,6 +612,7 @@ route('films', v => {
       <figure class="film"><video controls preload="metadata" playsinline poster="media/poster-motion.jpg" src="media/dawm-motion-graphic.mp4"></video><figcaption><b>모션그래픽 · 나에게 꼭 맞는 뷰티의 답</b><span class="small muted">스킨코드 진단부터 큐레이션까지, 서비스 콘셉트</span></figcaption></figure>
     </div>
     <div style="margin-top:30px;display:flex;gap:8px;flex-wrap:wrap"><a class="btn dark" href="#login">dawmtest로 직접 써보기</a><a class="btn" href="#home">다움 홈</a></div>
+    <p class="small muted" style="margin-top:22px">브랜드라면, <a href="#partners" style="color:var(--ink)">다움 파트너스 보기 →</a></p>
   </div></section>`;
 });
 
