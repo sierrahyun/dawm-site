@@ -147,13 +147,22 @@ const NET = (() => {
     mk('text', { x: 0, y: 3.2, 'text-anchor': 'middle', 'font-size': 8, 'font-weight': 600, class: 'dn-ink' }, hint).textContent = lab;
     hint.addEventListener('click', () => zoomOut(s));
   }
+  function prodStrip(i, n) {
+    if (!n) return `<div class="db">아직 다움 DB 제품에는 없어요 · <a href="#ing-${i.id}">성분 자세히 보기</a></div>`;
+    const code = typeof myCode === 'function' ? myCode() : null;
+    const ps = D.prod.filter(p => p.ing.includes(i.id)).map(p => ({ p, k: code ? productScore(p, code) : p.pop })).sort((a, b) => b.k - a.k).slice(0, 3);
+    return `<div class="dn-prods"><div class="h"><b>이 성분이 든 제품 ${n}개</b>${code ? `<span>${code} 점수 높은 순</span>` : '<span>인기순</span>'}</div>
+      <div class="row">${ps.map(({ p, k }) => `<a class="pp" href="#product-${p.id}">${bottle(p.cat, p.texture, p.id)}<span class="b">${esc(p.brand)}</span><span class="n">${esc(p.name)}</span>${code ? `<em>${k}점</em>` : ''}</a>`).join('')}</div>
+      <a class="all" href="#ing-${i.id}" data-jump="prods">${n}개 모두 보기 →</a></div>`;
+  }
   function showCard(s, o) {
     const i = D.ingById[o.m.id], n = pc(i.id), others = i.concepts.filter(id => id !== s.cid && D.conById[id]);
     s.card.innerHTML = `<div class="kick">성분 · ${esc(i.group)}</div><h3>${esc(i.ko)}</h3><div class="inci">${esc(i.inci[0])}</div><div class="role">${esc(i.role)}</div>${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
       <div class="rows">${s.cur.cols.map((c, k) => `<div><span>${esc(c)}</span><b>${esc(o.m.v[k] || '-')}</b></div>`).join('')}</div>
-      <div class="db">${n ? `다움 DB에 이 성분이 든 제품 <b>${n}개</b> · <a href="#ing-${i.id}">자세히 보기</a>` : `아직 다움 DB 제품에는 없어요 · <a href="#ing-${i.id}">자세히 보기</a>`}</div>
+      ${prodStrip(i, n)}
       <div class="nets"><button type="button" class="go">성분 네트워크에서 보기 →</button>${others.length ? `<div class="also">다른 연결 ${others.map(id => `<a href="#concept-${id}">${esc(D.conById[id].name)}</a>`).join('')}</div>` : ''}</div>`;
     s.card.querySelector('.go').onclick = () => zoomOut(s);
+    const all = s.card.querySelector('.all'); if (all) all.onclick = () => { window.DAWM_JUMP = 'prods'; };
     s.card.classList.add('on');
   }
   function focusOn(s, id, instant, entry) {

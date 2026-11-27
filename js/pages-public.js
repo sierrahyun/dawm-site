@@ -309,7 +309,7 @@ function naumOnConcept(c, code) {
 route('ing', (v, id) => {
   const i = D.ingById[id]; if (!i) { v.innerHTML = '<div class="wrap blk">성분을 찾을 수 없어요.</div>'; return; }
   const code = myCode();
-  const ps = D.prod.filter(p => p.ing.includes(i.id));
+  const ps = D.prod.filter(p => p.ing.includes(i.id)).sort((a, b) => code ? productScore(b, code) - productScore(a, code) : b.pop - a.pop);
   const art = i.tags.includes('ha') ? 'hyaluronic' : i.tags.includes('barrier') ? 'barrier' : null;
   const onShelf = me() && st().shelf.some(s => itemIngs(s).includes(i.id));
   const sus = me() && suspects().has(i.id);
@@ -320,15 +320,19 @@ route('ing', (v, id) => {
     <p style="font-size:17px;margin:18px 0 8px"><b>${esc(i.role)}</b></p>
     <p style="font-size:16px;line-height:1.85;margin:0">${esc(i.desc || '제형을 만들거나 안정화하는 보조 성분이에요. 다움 해석표는 계속 확장 중이에요.')}</p>
     ${i.tier === 'A' ? `<div class="chips" style="margin:18px 0">${axisTags(i, null)}</div>` : ''}
+    ${ps.length ? `<button type="button" class="btn dark sm jumpprods" style="margin:4px 0 8px">이 성분이 든 제품 ${ps.length}개 보기 ↓</button>` : ''}
     ${code && i.tier === 'A' ? `<div class="card" style="margin:12px 0;background:var(--soft)"><b style="color:var(--accent)">나움의 한마디 · ${code}</b><p style="margin:6px 0 0">${naumOnIngredient(i, code, onShelf, sus)}</p></div>` : ''}
     ${art ? `<a class="btn" href="#article-${art}" style="margin:8px 0 6px">관련 읽을거리 →</a>` : ''}
     ${i.concepts.map(cid => { const c = D.conById[cid]; return `<div class="card" style="margin-top:26px;padding:22px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">
       <div><span class="small muted">이 성분이 속한 개념</span><br><a href="#concept-${c.id}" style="text-decoration:none"><b style="font-size:20px">${esc(c.name)}</b></a> <span class="small muted">${esc(c.sum)}</span></div><a class="btn sm" href="#concept-${c.id}">개념 전체 보기 →</a></div>
       ${chainHTML(c, i.id)}<div class="netmount" data-cid="${c.id}" data-focus="${i.id}"></div>${compareTable(c, i.id)}</div>`; }).join('')}
-    <h2 class="h2" style="font-size:18px;margin:30px 0 12px">이 성분이 든 제품 ${ps.length}개</h2>
+    <h2 class="h2" id="ing-prods" style="font-size:18px;margin:30px 0 12px;scroll-margin-top:120px">이 성분이 든 제품 ${ps.length}개 <span class="small muted" style="font-weight:400">${code ? code + ' 점수 높은 순' : '인기순'}</span></h2>
     <div class="grid" style="gap:10px">${ps.length ? ps.map(p => prodRow(p, null, code, `<span class="tag gold">${p.ing.indexOf(i.id) + 1}번째</span>`)).join('') : '<p class="muted">아직 DB에 이 성분이 든 제품이 없어요.</p>'}</div>
   </div></section>`;
   mountNets(v);
+  const jp = () => { const h = v.querySelector('#ing-prods'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  const jb = v.querySelector('.jumpprods'); if (jb) jb.onclick = jp;
+  if (window.DAWM_JUMP === 'prods') { window.DAWM_JUMP = null; setTimeout(jp, 120); }
 });
 function naumOnIngredient(i, code, onShelf, sus) {
   const g = code.split('').filter(l => i.good.includes(l)), c = code.split('').filter(l => i.caution.includes(l));
